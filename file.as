@@ -1,6 +1,6 @@
 ; declarations
 ; define a constant variable
-    NUM: .define 10
+    NUM: .define 10         
 ; declare an array
     ARR: .data 4, 3, 1
 ; declare strings

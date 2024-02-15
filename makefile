@@ -1,15 +1,42 @@
-CC		= gcc
-FLAGS	= -ansi -Wall -pedantic
-BIN		= ./bin
+#CC = gcc
+#FLAGS = -ansi -Wall -pedantic
+#
+#SRC_DIR = src
+#OBJ_DIR = bin
+#	
+#$(OBJ_DIR):
+#	@test -d $(OBJ_DIR) || mkdir -p $(OBJ_DIR)
+#	
+#FILES = $(SRC_DIR)/utils/charutils.c $(SRC_DIR)/utils/inpututils.c $(SRC_DIR)/utils/strutils.c
+#OBJ_FILES = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(FILES))
+#
+#prog: $(OBJ_FILES)
+#	$(CC) $(FLAGS) $^ -o $@
+#
+#$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+#	$(CC) $(FLAGS) -c "$<" -o "$@"
+#
+CC = gcc
+FLAGS = -ansi -Wall -pedantic
 
-prog: $(BIN)/main.o $(BIN)/inpututils.o $(BIN)/charutils.o
-	$(CC) $(FLAGS) -g $(BIN)/main.o $(BIN)/inpututils.o -o prog
+SRC_DIR = src
+OBJ_DIR = bin
 
-$(BIN)/main.o: main.c $(BIN)/inpututils.o
-	$(CC) $(FLAGS) -c main.c -o $(BIN)/main.o
+# Create "bin" directory if needed
+$(OBJ_DIR):
+	@test -d $(OBJ_DIR) || mkdir -p $(OBJ_DIR)
 
-$(BIN)/inpututils.o: utils/inpututils.c $(BIN)/charutils.o
-	$(CC) $(FLAGS) -c utils/inpututils.c -o $(BIN)/inpututils.o
+# List source files recursively
+FILES = $(shell find $(SRC_DIR) -name "*.c") main.c
 
-$(BIN)/charutils.o: utils/charutils.c
-	$(CC) $(FLAGS) -c utils/charutils.c -o $(BIN)/charutils.o
+# Generate object file paths based on relative source paths
+OBJ_FILES = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(FILES))
+
+prog: $(OBJ_FILES)
+	$(CC) $(FLAGS) $^ -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	mkdir -p $(shell dirname "$@")
+	touch "$@"
+	$(CC) $(FLAGS) -c "$<" -o $@
+
