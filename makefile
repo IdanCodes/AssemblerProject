@@ -18,3 +18,9 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@touch "$@"
 	$(CC) $(FLAGS) -c "$<" -o $@
 
+# *manually* delete all object files using `make clean`
+clean:
+	rm -rf $(OBJ_DIR)
+
+# force re-compilation of all files (equivalent to `make -B`)
+force: clean prog
