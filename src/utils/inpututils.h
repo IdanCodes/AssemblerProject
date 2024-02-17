@@ -4,9 +4,15 @@
 
 #define MAXLINE         81  /* maximum amount of characters in a line including terminating character */
 
-#define getLine_FILE_END    (-1)    /* getLine return value for end of file */
-#define getLine_TOO_LONG    (-2)    /* getLine return value for a line that was too long */
+/* represents return/error statuses from getLine and similar methods */
+enum getLineStatus {
+    getLine_VALID = -5,
+    getLine_FILE_END,
+    getLine_TOO_LONG,
+    getLine_COMMENT
+};
 
-int getLine(FILE *fp, char line[], int maxlen);
+enum getLineStatus getLine(FILE *fp, char line[], int maxlen, int *len);
+enum getLineStatus getNextLine(FILE *fp, char line[], int maxlen, int *len);
 
 #endif /* INPUTUTILS */
