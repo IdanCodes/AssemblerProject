@@ -4,6 +4,11 @@
 
 #define MAXLINE         81  /* maximum amount of characters in a line including terminating character */
 
+#define PRE_ASSEMBLED_FILE_ENDING ".am"
+#define ENTRIES_FILE_ENDING ".ent"
+#define EXTERNALS_FILE_ENDING ".ext"
+#define OBJECT_FILE_ENDING ".obj"
+
 /* represents return/error statuses from getLine and similar methods */
 enum getLineStatus {
     getLine_VALID = -5,

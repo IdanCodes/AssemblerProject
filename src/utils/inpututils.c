@@ -57,7 +57,7 @@ enum getLineStatus getLine(FILE *fp, char line[], int maxlen, int *len) {
 
 /**
  * Get the next non-empty and not commented line (trimmed)
- * Error handling is the same as getLine
+ * Error handling is the same as getLine (except getLine_COMMENT, which never occurres)
  * @param fp the file to read from
  * @param line the line to read into
  * @param maxlen the maximum line size
