@@ -2,12 +2,7 @@
 #define INPUTUTILS
 #include <stdio.h>
 
-#define MAXLINE         81  /* maximum amount of characters in a line including terminating character */
-
-#define PRE_ASSEMBLED_FILE_ENDING ".am"
-#define ENTRIES_FILE_ENDING ".ent"
-#define EXTERNALS_FILE_ENDING ".ext"
-#define OBJECT_FILE_ENDING ".obj"
+#define MAXLINE         20  /* maximum amount of characters in a line including terminating character */
 
 /* represents return/error statuses from getLine and similar methods */
 enum getLineStatus {
@@ -17,7 +12,7 @@ enum getLineStatus {
     getLine_COMMENT
 };
 
-enum getLineStatus getLine(FILE *fp, char line[], int maxlen, int *len);
-enum getLineStatus getNextLine(FILE *fp, char line[], int maxlen, int *len);
+enum getLineStatus getLine(FILE *fp, char line[], unsigned int maxlen, int *len);
+enum getLineStatus getNextLine(FILE *fp, char line[], unsigned int maxlen, int *len);
 
 #endif /* INPUTUTILS */

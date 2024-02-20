@@ -1,0 +1,9 @@
+mcr my_mcr
+add NUM, r1
+prn r1
+end_mcr
+prn HI_STR
+LOOP:   sub NUM
+my_mcr
+cmp NUM, 0
+prn END_STR

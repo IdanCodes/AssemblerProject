@@ -9,6 +9,6 @@ enum preAssembleStatus {
     preAssemble_ERROR
 };
 
-enum preAssembleStatus preAssemble(FILE *fp);
+enum preAssembleStatus preAssemble(char fileName[]);
 
 #endif /* PRE_ASM */

@@ -2,27 +2,42 @@
 #include "../utils/inpututils.h"
 #include "../utils/logger.h"
 #include "../utils/strutils.h"
+#include "../utils/fileutils.h"
 
-enum preAssembleStatus preAssemble(FILE *fp) {
-    unsigned int lineNumber;
+/* DOCUMENT preAssemble */
+/* fileName is the name of the file without the added extension */
+enum preAssembleStatus preAssemble(char fileName[]) {
+    unsigned int sourceLine;
     char line[MAXLINE];
-    int err, len;
+    int getLineErr, len;
+    char sourceFileName[FILENAME_MAX], outFilePath[FILENAME_MAX];
+    FILE *sourcef, *outf;
+
     
-    lineNumber = 0;
-    while ((err = getLine(fp, line, MAXLINE, &len)) != getLine_FILE_END) {
-        lineNumber++;
+    /* -- open source and output files -- */
+    sprintf(sourceFileName, "%s.%s", fileName, SOURCE_FILE_EXTENSION);
+    sprintf(outFilePath, "%s.%s", fileName, PRE_ASSEMBLED_FILE_EXTENSION);
+
+    openFile(sourceFileName, "r", &sourcef);    /* open requested file for reading */
+    openFile(outFilePath, "w", &outf);      /* open pre-assembled file for writing */
+    
+    sourceLine = 0;
+    while ((getLineErr = getLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
+        sourceLine++;
         
-        if (err == getLine_TOO_LONG) {
-            logError("Line %u is too long (allowed length is %d characters).\n", lineNumber, MAXLINE);
-            return preAssemble_ERROR;
+        if (getLineErr == getLine_TOO_LONG) {
+            logWarn("Line %u in file '%s' is too long! Ignoring line (maximum size is %d characters).\n", sourceLine, sourceFileName, MAXLINE-1);
+            continue;
         }
-        
-        len = trim(line);
-        if (err == getLine_COMMENT || len == 0)
+        else if ((len = trim(line) == 0) || getLineErr == getLine_COMMENT)
             continue;
         
-        logPrint("%u. %s\n", lineNumber, line);
+        fprintf(outf, "%s\n", line);
     }
+    
+    /* close opened files */
+    fclose(sourcef);
+    fclose(outf);
     
     return preAssemble_OK;
 }

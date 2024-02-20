@@ -37,6 +37,9 @@ int trim(char *str) {
     int i;
     char *start = getStart(str);
     char *end = getEnd(str);
+    if (*str == '\0')
+        return 0;
+    
     if (str != start) {
         for (i = 0; i <= (int)(end - start); i++)
             str[i] = start[i];  /* move back */
@@ -47,7 +50,7 @@ int trim(char *str) {
     /* remove trailing spaces (close the string) */
     str[i] = '\0';
     
-    return i - 1;
+    return i;
 }
 
 /**
