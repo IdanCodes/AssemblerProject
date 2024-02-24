@@ -3,12 +3,13 @@
 #include "../utils/logger.h"
 #include "../utils/strutils.h"
 #include "../utils/fileutils.h"
+#include "../utils/charutils.h"
 
 /* DOCUMENT preAssemble */
 /* fileName is the name of the file without the added extension */
 enum preAssembleStatus preAssemble(char fileName[]) {
     unsigned int sourceLine;
-    char line[MAXLINE];
+    char line[MAXLINE+1];   /* account for '\0' */
     int getLineErr, len;
     char sourceFileName[FILENAME_MAX], outFilePath[FILENAME_MAX];
     FILE *sourcef, *outf;
@@ -25,12 +26,12 @@ enum preAssembleStatus preAssemble(char fileName[]) {
     while ((getLineErr = getLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine++;
         
-        if (getLineErr == getLine_TOO_LONG) {/* TODO: logWarn instead of printf */
-            logWarn("Line %u in file '%s' is too long! Ignoring line (maximum size is %d characters).\n", sourceLine, sourceFileName, MAXLINE-1);
+        if (getLineErr == getLine_TOO_LONG) {
+            logWarn("Line %u in file '%s' is too long! Ignoring line (maximum size is %d characters).\n", sourceLine, sourceFileName, MAXLINE);
             continue;
         }
-        else if ((len = trim(line) == 0) || getLineErr == getLine_COMMENT)
-            continue;
+        else if ((len = trim(line) == 0) || line[0] == COMMENT_CHAR)
+            continue;   /* empty or comment - skip */
         
         fprintf(outf, "%s\n", line);
     }
