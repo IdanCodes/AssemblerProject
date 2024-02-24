@@ -83,7 +83,6 @@ enum preAssembleStatus preAssemble(char fileName[]) {
                 break;
             }
             
-            logInfo("Expanding '%s' in line %u\n", token, sourceLine);
             expandMacro(mcr, outf, sourceFileName);
             continue;
         }
@@ -195,7 +194,7 @@ void expandMacro(MACRO *mcr, FILE *destf, char *sourcefileName) {
             ;   /* read a sourceLine */
     }
     
-    for (sourceLine = mcr->startLine; sourceLine <= mcr->endLine;) {
+    for (sourceLine = mcr->startLine; sourceLine < mcr->endLine;) {
         sourceLine += getNextLine(sourcef, line, MAXLINE, &len);
         fprintf(destf, "%s\n", line);
     }

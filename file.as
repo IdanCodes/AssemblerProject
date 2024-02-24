@@ -13,7 +13,7 @@ mcr my_mcr
     add NUM, r1
 ; print the value in r1
     prn r1
-end_mcr
+endmcr
 
 ; -- print
 prn HI_STR
