@@ -1,7 +1,6 @@
 #include "inpututils.h"
 #include "charutils.h"
 #include "strutils.h"
-#include "logger.h"
 
 /* getLine: get the next input line from given file
  * fp - the file to read from

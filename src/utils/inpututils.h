@@ -2,11 +2,11 @@
 #define INPUTUTILS
 #include <stdio.h>
 
-#define MAXLINE         20  /* maximum amount of characters in a line including terminating character */
+#define MAXLINE         81  /* maximum amount of characters in a line including terminating character */
 
 /* represents return/error statuses from getLine and similar methods */
 enum getLineStatus {
-    getLine_VALID = -5,
+    getLine_VALID = -4,
     getLine_FILE_END,
     getLine_TOO_LONG,
     getLine_COMMENT

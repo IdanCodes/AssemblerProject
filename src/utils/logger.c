@@ -3,52 +3,76 @@
 #include <stdlib.h>
 #include "logger.h"
 
-/* TODO: Document these methods */
+/* DOCUMENT logger */
+
+#define LOGGER_INFO_PREFIX  "INFO"
+#define LOGGER_INFO_COLOR   logColor_CYAN
+#define LOGGER_WARN_PREFIX  "WARN"
+#define LOGGER_WARN_COLOR   logColor_YELLOW
+#define LOGGER_ERR_PREFIX   "ERR"
+#define LOGGER_ERR_COLOR    logColor_RED
+
+static void setColor(enum logColor color);
+static void resetColor(void);
+static void logPrintInColorWithPrefix(enum logColor color, char *prefix, char *fmt, va_list args);
+
+static void setColor(enum logColor color) {
+    printf("\x1b[%dm", color);
+}
+
+static void resetColor(void) {
+    setColor(logColor_RESET);
+}
+static void logPrintInColorWithPrefix(enum logColor color, char *prefix, char *fmt, va_list args) {
+    setColor(color);
+    printf("[%s]: ", prefix);
+    vprintf(fmt, args);
+    resetColor();
+}
 
 void logPrint(char *fmt, ...) {
     va_list args;
-
-    va_start(args, fmt);    /* initialize args */
-    fprintf(stdout, "");
-    vfprintf(stdout, fmt, args);    /* use 'vfprintf' to handle formatting */
-    va_end(args);           /* close the args */
+    
+    va_start(args, fmt);
+    resetColor();
+    vprintf(fmt, args);
+    va_end(args);
 }
 
 void logInfo(char *fmt, ...) {
     va_list args;
-
-    va_start(args, fmt);    /* initialize args */
-    fprintf(stdout, "[INFO]: ");
-    vfprintf(stdout, fmt, args);    /* use 'vfprintf' to handle formatting */
-    va_end(args);           /* close the args */
+    va_start(args, fmt);
+    
+    logPrintInColorWithPrefix(LOGGER_INFO_COLOR, LOGGER_INFO_PREFIX, fmt, args);
+    
+    va_end(args);
 }
 
 void logWarn(char *fmt, ...) {
     va_list args;
+    va_start(args, fmt);
 
-    va_start(args, fmt);    /* initialize args */
-    fprintf(stdout, "[WARN]: ");
-    vfprintf(stdout, fmt, args);    /* use 'vfprintf' to handle formatting */
-    va_end(args);           /* close the args */
+    logPrintInColorWithPrefix(LOGGER_WARN_COLOR, LOGGER_WARN_PREFIX, fmt, args);
+
+    va_end(args);
 }
 
-void logError(char *fmt, ...) {
+void logErr(char *fmt, ...) {
     va_list args;
+    va_start(args, fmt);
 
-    va_start(args, fmt);    /* initialize args */
-    fprintf(stdout, "[ERR]: ");
-    vfprintf(stdout, fmt, args);    /* use 'vfprintf' to handle formatting */
-    va_end(args);           /* close the args */
+    logPrintInColorWithPrefix(LOGGER_ERR_COLOR, LOGGER_ERR_PREFIX, fmt, args);
+
+    va_end(args);
 }
 
-/* print & exit */
 void terminalError(int exitCode, char *fmt, ...) {
     va_list args;
+    va_start(args, fmt);
 
-    va_start(args, fmt);    /* initialize args */
-    fprintf(stdout, "[ERR]: ");
-    vfprintf(stdout, fmt, args);    /* use 'vfprintf' to handle formatting */
-    va_end(args);           /* close the args */
-    
+    logPrintInColorWithPrefix(LOGGER_ERR_COLOR, LOGGER_ERR_PREFIX, fmt, args);
+
+    va_end(args);
     exit(exitCode);
 }
+

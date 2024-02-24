@@ -1,3 +1,7 @@
+NUM: .define 10
+ARR: .data 4, 3, 1
+HI_STR: .string "HI"
+END_STR: .string "END"
 mcr my_mcr
 add NUM, r1
 prn r1
@@ -6,4 +10,5 @@ prn HI_STR
 LOOP:   sub NUM
 my_mcr
 cmp NUM, 0
+bne LOOP
 prn END_STR

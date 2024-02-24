@@ -25,7 +25,7 @@ enum preAssembleStatus preAssemble(char fileName[]) {
     while ((getLineErr = getLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine++;
         
-        if (getLineErr == getLine_TOO_LONG) {
+        if (getLineErr == getLine_TOO_LONG) {/* TODO: logWarn instead of printf */
             logWarn("Line %u in file '%s' is too long! Ignoring line (maximum size is %d characters).\n", sourceLine, sourceFileName, MAXLINE-1);
             continue;
         }
