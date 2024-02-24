@@ -12,5 +12,6 @@ enum getLineStatus {
 };
 
 enum getLineStatus getLine(FILE *fp, char line[], unsigned int maxlen, int *len);
+int getNextLine(FILE *fp, char line[], unsigned int maxlen, int *len);
 
 #endif /* INPUTUTILS */

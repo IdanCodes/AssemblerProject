@@ -17,7 +17,7 @@ char *getStart(char *str) {
  * @param str the given string
  * @return the pointer to the last non-space character of a string
  */
-char *getEnd(char *str) {
+char *getStrEnd(char *str) {
     if (*str == '\0')
         return str;
     for (; *(str+1) != '\0'; str++)
@@ -36,7 +36,7 @@ int trim(char *str) {
     /* remove leading spaces */
     int i;
     char *start = getStart(str);
-    char *end = getEnd(str);
+    char *end = getStrEnd(str);
     if (*str == '\0')
         return 0;
     
@@ -54,13 +54,43 @@ int trim(char *str) {
 }
 
 /**
- * Remove the trailing spaces of a string 
- * @param str the given string
+ * Get the last non-space character of the first token (first token in the string)
+ * @param tok the given token
+ * @return the desired pointer
  */
-void trimEnd(char *str) {
-    char *end;
-    if (*str != '\0') {
-        end = getEnd(str);
-        *(end + 1) = '\0';
+char *getTokEnd(char *tok) {
+    if (isspace(*tok) || *tok == '\0')
+        return tok;
+    for (; !isspace(*tok) && *tok != '\0'; tok++)
+        ;   /* wait for a space/termination */
+    return tok-1;
+}
+
+/**
+ * Get the next token in the string
+ * @param tok the given token
+ * @return the pointer to the next token in the string
+ */
+char *getNextToken(char *tok) {
+    return getStart(getTokEnd(tok) + 1);
+}
+
+/**
+ * Compare the first tokens of the given strings
+ * @param str1 a given string
+ * @param str2 a given string
+ * @return the result of comparison of the two first tokens of the given strings
+ */
+int tokcmp(char *str1, char *str2) {
+    unsigned int i, len, len1, len2;
+    
+    len = ((len1 = (getTokEnd(str1) - str1)) < (len2 = (getTokEnd(str2) - str2)) ? len1 : len2) + 1;
+    
+    for (i = 0; i < len; i++) {
+        if (str1[i] != str2[i])
+            return str1[i] - str2[i];
     }
+    
+    return ((str1[len] == '\0' || str1[len] == ' ') && (str2[len] == '\0' || str2[len] == ' ')) ? 0
+            : (str1[len] == '\0' || str1[len] == ' ') ? -1 : 1;
 }

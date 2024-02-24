@@ -47,4 +47,3 @@ void deleteFile(char fileName[]) {
 int tryDeleteFile(char fileName[]) {
     return (remove(fileName) == 0);
 }
-
