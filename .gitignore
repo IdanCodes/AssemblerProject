@@ -6,6 +6,7 @@
 /.idea/*
 /CMakeLists.txt
 
-# Project junk
+# Program generated files
 /bin
 /prog
+/*.am
