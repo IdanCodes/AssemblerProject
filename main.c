@@ -5,6 +5,10 @@
 #define FILENAME "file"
 
 int main(void) {
-    preAssemble(FILENAME);
+    if (preAssemble(FILENAME) != preAssembleErr_no_err)
+        return 1;
+    
+    
+    
     return 0;
 }

@@ -8,7 +8,8 @@
 
 /* DOCUMENT preAssemble */
 /* fileName is the name of the file without the added extension */
-enum preAssembleStatus preAssemble(char fileName[]) {
+/* returns 0 if there was an error, 1 otherwise */
+enum preAssembleErr preAssemble(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine;
     int skippedLines, len, readingMcr;
@@ -104,7 +105,7 @@ enum preAssembleStatus preAssemble(char fileName[]) {
         deleteFile(outFileName);
     }
     
-    return preAssemble_OK;
+    return preAsmErr;
 }
 
 /**

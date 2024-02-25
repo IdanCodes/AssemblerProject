@@ -22,13 +22,7 @@ enum preAssembleErr {
     preAssembleErr_macro_exists
 };
 
-/* TODO: remove this, only return 0 and 1 (if the enum is binary) */
-enum preAssembleStatus {
-    preAssemble_OK,
-    preAssemble_ERROR
-};
-
-enum preAssembleStatus preAssemble(char fileName[]);
+enum preAssembleErr preAssemble(char fileName[]);
 char *preAsmErrMessage(enum preAssembleErr err);
 MACRO *allocMcr(char *name);
 void freeMcr(MACRO *mcr);
