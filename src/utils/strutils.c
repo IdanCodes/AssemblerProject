@@ -1,5 +1,7 @@
+#include <math.h>
 #include "strutils.h"
 #include "charutils.h"
+#include "logger.h"
 
 /**
  * Get the first non-space character of a string
@@ -93,4 +95,68 @@ int tokcmp(char *str1, char *str2) {
     
     return ((str1[len] == '\0' || str1[len] == ' ') && (str2[len] == '\0' || str2[len] == ' ')) ? 0
             : (str1[len] == '\0' || str1[len] == ' ') ? -1 : 1;
+}
+
+/**
+ * Get the first occurrence of a character in a string, if it doesn't exist returns the end of the string
+ * @param str 
+ * @param c 
+ * @return The first occurrence of the requested character or the address of the string's end
+ */
+char *getFirstOrEnd(char *str, char c) {
+    for (; *str != c && *str != '\0'; str++)
+        ;   /* wait for condition to be false */
+    return str;
+}
+
+/* tryParseNumber: tries to parse a string's first token to double.
+ * returns whether the parsing was successful. (whether the token is a valid double) */
+int tryParseNumber(char *str, double *number) {
+    int sign, zeroPrefix;
+    char *end;
+    double power, result;
+
+    end = getTokEnd(str) + 1; /* character after last one */
+    sign = 1;
+    result = 0;
+
+    if (*str == '-') {
+        sign = -1;
+        str++;
+    }
+
+    /* skip 0 prefix */
+    zeroPrefix = (*str == '0');
+    while (*str == '0')
+        str++;
+
+    if (str == end && zeroPrefix && sign > 0) /* don't accept "-0" */
+        return 1;   /* just a string full of zeroes */
+
+    if ((str == end && !zeroPrefix) ||   /* if we've reached the end of the token (and there were no prefixing zeros) */
+        (!isdigit(*str) && (!zeroPrefix || *str != '.')) ||   /* if the character is not a digit and not a valid period */
+        (*str == '.' && str + 1 == end))  /* if the character is a period and the last character */
+        return 0; /* not a number */
+
+    /* read whole part */
+    for (; str < end && *str != '.'; str++) {
+        if (!isdigit(*str))    /* not a digit nor a '.' */
+            return 0;
+
+        result *= 10;
+        result += *str - '0';   /* "un-ascii-fy" the char */
+    }
+
+    if ((str++) < end) {
+        /* read decimal part */
+        for (power = 1; str < end; str++) {
+            if (!isdigit(*str))
+                return 0;
+
+            result += (*str - '0') * pow(10, -(power++));
+        }
+    }
+
+    *number = result * sign;
+    return 1;
 }

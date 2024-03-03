@@ -8,12 +8,12 @@
 
 /* DOCUMENT preAssemble */
 /* fileName is the name of the file without the added extension */
-/* returns 0 if there was an error, 1 otherwise */
+/* returns the error (or preAssembleErr_no_err if there wasn't one) */
 enum preAssembleErr preAssemble(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine;
     int skippedLines, len, readingMcr;
-    char line[MAXLINE + 1];   /* account for '\0' */
+    char line[MAXLINE + 1]; /* account for '\0' */
     char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token;
     FILE *sourcef, *outf;
     MACRO *head, *tail, *mcr;
@@ -101,7 +101,7 @@ enum preAssembleErr preAssemble(char fileName[]) {
     }
 
     if (preAsmErr != preAssembleErr_no_err) {   /* TODO: use logerror instead */
-        printf("%s (line %u).\n", preAsmErrMessage(preAsmErr), sourceLine);
+        printf("%s (line %u in file '%s').\n", preAsmErrMessage(preAsmErr), sourceLine, sourceFileName);
         deleteFile(outFileName);
     }
     
@@ -183,19 +183,19 @@ MACRO *getMacroWithName(char *name, MACRO *head) {
  * @param destf the file to expand to
  */
 void expandMacro(MACRO *mcr, FILE *destf, char *sourcefileName) {
-    unsigned int sourceLine;
+    unsigned int sourceLine, skippedLines;
     int len;
     char line[MAXLINE + 1];
     FILE *sourcef;
     
     openFile(sourcefileName, "r", &sourcef);
     
-    for (sourceLine = 0; sourceLine < mcr->startLine; sourceLine++) {
-        while (getc(sourcef) != '\n')
-            ;   /* read a sourceLine */
+    for (sourceLine = 0, skippedLines = 0; sourceLine < mcr->startLine-1; sourceLine += skippedLines) {
+        if ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) == getLine_FILE_END)
+            terminalError(1, "Error expanding macro '%s' - reached end of file (in file '%s').\n", mcr->name, sourcefileName);
     }
     
-    for (sourceLine = mcr->startLine; sourceLine < mcr->endLine;) {
+    for (; sourceLine < mcr->endLine;) {
         sourceLine += getNextLine(sourcef, line, MAXLINE, &len);
         fprintf(destf, "%s\n", line);
     }
