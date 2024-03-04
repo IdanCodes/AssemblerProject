@@ -3,4 +3,4 @@
 
 .define woof = 5
 
-.define meow = 3
+.define d3 = 3

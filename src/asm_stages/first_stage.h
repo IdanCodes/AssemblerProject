@@ -5,19 +5,27 @@
 #define LABEL_MAX_SIZE  31
 #define KEYWORD_CONSTANT_DEFINITION  ".define"
 
-typedef struct AsmConst {
-    char *name;
+/* TODO: change to symbol with flags (mdefine flag for constant) */
+union SymbolType {
     double value;
-    struct AsmConst *next;
-} AsmConst;
+    unsigned int dataAddress;
+};
+
+typedef struct Symbol {
+    char *name;
+    union SymbolType *value;
+    int mdefine;
+    struct Symbol *next;
+} Symbol;
 
 enum firstStageErr {
     firstStageErr_no_err,   /* no error */
+    firstStageErr_name_expected_define, /* name expected */
     firstStageErr_unexpected_chars_define,
     firstStageErr_expected_equal_sign_define,   /* expected after constant name */
     firstStageErr_invalid_name_define,  /* the constant name was invalid */
     firstStageErr_name_taken_define,    /* name of constant taken */
-    firstStageErr_const_value_nan   /* value is not a number */
+    firstStageErr_value_nan_define  /* value is not a number */
 };
 
 void assemblerFirstStage(char fileName[]);

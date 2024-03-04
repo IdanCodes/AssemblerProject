@@ -124,6 +124,10 @@ int tryParseNumber(char *str, double *number) {
         sign = -1;
         str++;
     }
+    else if (*str == '+') {
+        sign = 1;
+        str++;
+    }
 
     /* skip 0 prefix */
     zeroPrefix = (*str == '0');

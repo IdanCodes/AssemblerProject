@@ -8,9 +8,9 @@
 #include "../utils/strutils.h"
 
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, ...); /* TODO: implement */
-static int constWithNameExists(char *name, AsmConst *head, AsmConst **c);
-static void registerConstant(AsmConst **head, char *name, double value);
-static enum firstStageErr fetchConstant(char *line, AsmConst **constants);
+static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol);
+static void registerConstant(Symbol **head, char *name, double value);
+static enum firstStageErr fetchConstant(char *line, Symbol **constants);
 
 /* fileName is the file's name without the extension */
 void assemblerFirstStage(char fileName[]) {
@@ -20,7 +20,7 @@ void assemblerFirstStage(char fileName[]) {
     char line[MAXLINE + 1]; /* account for '\0' */
     int len;
     FILE *sourcef;
-    AsmConst *constants;
+    Symbol *symbols;
     enum firstStageErr err;
     
     
@@ -35,14 +35,14 @@ void assemblerFirstStage(char fileName[]) {
     instructionCounter = 0;
     dataCounter = 0;
     sourceLine = 0;
-    constants = NULL;
+    symbols = NULL;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine += skippedLines;
         token = getStart(line);
         
         /* check if the line is a constant definition */
         if (tokcmp(token, KEYWORD_CONSTANT_DEFINITION) == 0) {
-            if ((err = fetchConstant(line, &constants)) != firstStageErr_no_err)
+            if ((err = fetchConstant(line, &symbols)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine);
             continue;
         }
@@ -51,13 +51,19 @@ void assemblerFirstStage(char fileName[]) {
 
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, ...) {
     /* TODO: implement & print the file where the error came from */
-    printf("ERROR - %d\n", err);
+    printf("ERROR %d in line %u (.am)\n", err, sourceLine);
 }
 
-int validLabelName(char *name) {
+/* is the token a valid name for a label? */
+int validSymbolName(char *name, Symbol *head) {
     int len;
+    Symbol *tempS;
+    
     if (*name == '\0')
         return 0;
+    
+    if (getSymbolByName(name, head, &tempS))
+        return 0;   /* a symbol with this name already exists */
     
     if (isnumber(*name))    /* is the first character a number? */
         return 0;
@@ -69,10 +75,10 @@ int validLabelName(char *name) {
     return len <= LABEL_MAX_SIZE && (isspace(*name) || *name == '\0');
 }
 
-static int constWithNameExists(char *name, AsmConst *head, AsmConst **c) {
+static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol) {
     while (head != NULL) {
         if (tokcmp(head->name, name) == 0) {
-            *c = head;
+            *pSymbol = head;
             return 1;
         }
         head = head->next;
@@ -81,21 +87,25 @@ static int constWithNameExists(char *name, AsmConst *head, AsmConst **c) {
     return 0;
 }
 
-static void registerConstant(AsmConst **head, char *name, double value) {
-    AsmConst *c, *temp;
-    
-    c = (AsmConst *)malloc(sizeof(AsmConst));
-    if (c == NULL)
-        terminalError(1, "Insufficient memory");
-    
-    c->name = strdup(name);
-    if (c->name == NULL)
-        terminalError(1, "Insufficient memory");
-    
-    c->value = value;
+static void registerConstant(Symbol **head, char *name, double value) {
+    Symbol *pConst, *temp;
+
+    pConst = (Symbol *)malloc(sizeof(Symbol));
+    if (pConst == NULL)
+        terminalError(1, "Insufficient memory\n");
+
+    pConst->name = strdup(name);
+    if (pConst->name == NULL)
+        terminalError(1, "Insufficient memory\n");
+
+    pConst->value = (union SymbolType *)malloc(sizeof(double));
+    if (pConst->value == NULL)
+        terminalError(1, "Insufficient memory\n");
+
+    pConst->value->value = value;
     
     if (*head == NULL) {
-        *head = c;
+        *head = pConst;
         return;
     }
     
@@ -103,19 +113,24 @@ static void registerConstant(AsmConst **head, char *name, double value) {
     while (temp->next != NULL)
         temp = temp->next;
 
-    temp->next = c;
+    temp->next = pConst;
+    pConst->mdefine = 1;
 }
 
-static enum firstStageErr fetchConstant(char *line, AsmConst **constants) {
+static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
     char *name, *token, *equalsSign, *strVal;
     double doubleVal;
-    AsmConst *tempConst;
+    Symbol *tempConst;
     
     token = getStart(line);
     
     /* fetch name + syntax validation */
     name = (token = getNextToken(token));
     equalsSign = getFirstOrEnd(token, '=');
+    
+    if (name == equalsSign) /* equals sign appeared before name */
+        return firstStageErr_name_expected_define;
+    
     if (getNextToken(name) < equalsSign)    /* equal sign expected */
         return firstStageErr_expected_equal_sign_define;
 
@@ -129,14 +144,14 @@ static enum firstStageErr fetchConstant(char *line, AsmConst **constants) {
         return firstStageErr_invalid_name_define;
 
     /* check name against existing constants' names */
-    if (*constants != NULL && constWithNameExists(name, *constants, &tempConst))
+    if (*constants != NULL && getSymbolByName(name, *constants, &tempConst))
         return firstStageErr_name_taken_define;
 
     /* TODO: check against saved keywords */
 
     /* make sure the value is a number */
     if (!tryParseNumber(strVal, &doubleVal))
-        return firstStageErr_const_value_nan;
+        return firstStageErr_value_nan_define;
 
     /* register the new constant */
     registerConstant(constants, name, doubleVal);
