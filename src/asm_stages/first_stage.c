@@ -15,13 +15,14 @@ static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol);
 static void registerConstant(Symbol **head, char *name, int value);
 static enum firstStageErr fetchConstant(char *line, Symbol **constants);
 
+/* DOCUMENT */
 /* fileName is the file's name without the extension */
 void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
     unsigned int /*instructionCounter, dataCounter, */sourceLine, skippedLines;
-    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *token;
+    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *token, *tokEnd;
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len;
+    int len, labelDefinition;
     FILE *sourcef;
     Symbol *symbols;
     enum firstStageErr err;
@@ -43,12 +44,25 @@ void assemblerFirstStage(char fileName[]) {
         sourceLine += skippedLines;
         token = getStart(line);
         
-        /* check if the line is a constant definition */
+        /* constant declaration? */
         if (tokcmp(token, KEYWORD_CONST_DEC) == 0) {
             if ((err = fetchConstant(line, &symbols)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine);
             continue;
         }
+        
+        /* label declaration? */
+        if (*(tokEnd = getTokEnd(token)) == LABEL_END_CHAR) {
+            if (!validSymbolName(token, tokEnd - 1)) {
+                printFirstStageError(firstStageErr_invalid_name_label, sourceLine);
+                continue;
+            }
+            logInfo("Defining label in line %d\n", sourceLine);
+            labelDefinition = 1;
+            token = getNextToken(token);
+            /* TODO: check if it is allowed to define a label on an empty line, and check for an empty line */
+        }
+        
     }
 
     freeSymbolsList(symbols);
@@ -59,21 +73,18 @@ static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine
     printf("ERROR %d in line %u (.am)\n", err, sourceLine);
 }
 
-/* is the token a valid name for a symbol? */
-int validSymbolName(char *name) {
-    int len;
-    if (*name == '\0')
+/* is the token a valid name for a symbol */
+int validSymbolName(char *tok, char *end) {
+    if (end <= tok || (end - tok) >= LABEL_MAX_LENGTH ||  /* invalid length */
+        !isalpha(*tok))    /* first character is not alphabetic */
         return 0;
 
-    if (!isalpha(*name))
-        return 0;   /* the first character is not alphabetic */
-        
-    for (len = 1, name++; len < LABEL_MAX_SIZE && isalnum(*name); len++, name++)
-        ; /* continue reading the name as long as it is alphanumeric */
-        
-    /* TODO: change this to accept labels, or just take care of this some other way. */
-    /* if we've reached the end of the string, it means it's completely alphanumeric (except the first character) */
-    return len <= LABEL_MAX_SIZE && (isspace(*name) || *name == '\0');
+    for (tok++; tok < end; tok++) {
+        if (!isalnum(*tok))
+            return 0;
+    }
+
+    return 1;
 }
 
 static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol) {
@@ -128,16 +139,19 @@ static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
     if (name == equalsSign) /* equals sign appeared before name */
         return firstStageErr_name_expected_define;
     
-    if (getNextToken(name) < equalsSign)    /* equal sign expected */
+    if (*equalsSign == '\0' || getNextToken(name) < equalsSign)    /* equal sign expected */
         return firstStageErr_expected_equal_sign_define;
 
     /* fetch strVal + syntax validation */
     strVal = (token = getNextToken(equalsSign));
+    if (*strVal == '\0')
+        return firstStageErr_value_expected_define;
+    
     if (*getNextToken(token) != '\0')   /* extra characters */
         return firstStageErr_unexpected_chars_define;
 
     /* make sure the constant's name is valid */
-    if (!validSymbolName(name))
+    if (!validSymbolName(name, getTokEnd(name)))
         return firstStageErr_invalid_name_define;
 
     /* check if the name is a saved keyword */

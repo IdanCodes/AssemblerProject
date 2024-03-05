@@ -92,6 +92,7 @@ enum preAssembleErr preAssemble(char fileName[]) {
         fprintf(outf, "%s\n", line);
     }
     
+    
     /* -- cleaning up -- */
     fclose(sourcef);
     fclose(outf);

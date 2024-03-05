@@ -1,6 +1,11 @@
+.define hi = 2
+ENDSTR: .string "FINISHED!"
 
-.define meow = 4
+HELLO: mov hi, r1
 
-.define woof = 5
+LOOPSTART: prn #hi
+dec r1
+cmp r1, 0
+bne LOOP_START
 
-.define d3 = 3
+prn END_STR
