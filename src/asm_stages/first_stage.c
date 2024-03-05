@@ -6,16 +6,19 @@
 #include "../utils/charutils.h"
 #include "../utils/logger.h"
 #include "../utils/strutils.h"
+#include "../utils/operations.h"
+#include "../utils/keywords.h"
 
+static void freeSymbolsList(Symbol *head);
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, ...); /* TODO: implement */
 static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol);
-static void registerConstant(Symbol **head, char *name, double value);
+static void registerConstant(Symbol **head, char *name, int value);
 static enum firstStageErr fetchConstant(char *line, Symbol **constants);
 
 /* fileName is the file's name without the extension */
 void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
-    unsigned int instructionCounter, dataCounter, sourceLine, skippedLines;
+    unsigned int /*instructionCounter, dataCounter, */sourceLine, skippedLines;
     char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *token;
     char line[MAXLINE + 1]; /* account for '\0' */
     int len;
@@ -32,8 +35,8 @@ void assemblerFirstStage(char fileName[]) {
     
     
     /* -- main loop -- */
-    instructionCounter = 0;
-    dataCounter = 0;
+    /*instructionCounter = 0;
+    dataCounter = 0;*/
     sourceLine = 0;
     symbols = NULL;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
@@ -41,12 +44,14 @@ void assemblerFirstStage(char fileName[]) {
         token = getStart(line);
         
         /* check if the line is a constant definition */
-        if (tokcmp(token, KEYWORD_CONSTANT_DEFINITION) == 0) {
+        if (tokcmp(token, KEYWORD_CONST_DEC) == 0) {
             if ((err = fetchConstant(line, &symbols)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine);
             continue;
         }
     }
+
+    freeSymbolsList(symbols);
 }
 
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, ...) {
@@ -54,23 +59,19 @@ static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine
     printf("ERROR %d in line %u (.am)\n", err, sourceLine);
 }
 
-/* is the token a valid name for a label? */
-int validSymbolName(char *name, Symbol *head) {
+/* is the token a valid name for a symbol? */
+int validSymbolName(char *name) {
     int len;
-    Symbol *tempS;
-    
     if (*name == '\0')
         return 0;
-    
-    if (getSymbolByName(name, head, &tempS))
-        return 0;   /* a symbol with this name already exists */
-    
-    if (isnumber(*name))    /* is the first character a number? */
-        return 0;
+
+    if (!isalpha(*name))
+        return 0;   /* the first character is not alphabetic */
         
     for (len = 1, name++; len < LABEL_MAX_SIZE && isalnum(*name); len++, name++)
         ; /* continue reading the name as long as it is alphanumeric */
-
+        
+    /* TODO: change this to accept labels, or just take care of this some other way. */
     /* if we've reached the end of the string, it means it's completely alphanumeric (except the first character) */
     return len <= LABEL_MAX_SIZE && (isspace(*name) || *name == '\0');
 }
@@ -87,7 +88,7 @@ static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol) {
     return 0;
 }
 
-static void registerConstant(Symbol **head, char *name, double value) {
+static void registerConstant(Symbol **head, char *name, int value) {
     Symbol *pConst, *temp;
 
     pConst = (Symbol *)malloc(sizeof(Symbol));
@@ -98,11 +99,8 @@ static void registerConstant(Symbol **head, char *name, double value) {
     if (pConst->name == NULL)
         terminalError(1, "Insufficient memory\n");
 
-    pConst->value = (union SymbolType *)malloc(sizeof(double));
-    if (pConst->value == NULL)
-        terminalError(1, "Insufficient memory\n");
-
-    pConst->value->value = value;
+    pConst->value = value;
+    pConst->mdefine = 1;
     
     if (*head == NULL) {
         *head = pConst;
@@ -114,13 +112,12 @@ static void registerConstant(Symbol **head, char *name, double value) {
         temp = temp->next;
 
     temp->next = pConst;
-    pConst->mdefine = 1;
 }
 
 static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
-    char *name, *token, *equalsSign, *strVal;
-    double doubleVal;
-    Symbol *tempConst;
+    char *name, *token, *equalsSign, *strVal, tempC;
+    int numberValue;
+    Symbol *tempSymbol;
     
     token = getStart(line);
     
@@ -140,22 +137,37 @@ static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
         return firstStageErr_unexpected_chars_define;
 
     /* make sure the constant's name is valid */
-    if (!validLabelName(name))
+    if (!validSymbolName(name))
         return firstStageErr_invalid_name_define;
 
-    /* check name against existing constants' names */
-    if (*constants != NULL && getSymbolByName(name, *constants, &tempConst))
+    /* check if the name is a saved keyword */
+    if (isSavedKeyword(name))
+        return firstStageErr_saved_keyword_define;
+    
+    /* check if the name is an existing constants' names */
+    if (*constants != NULL && getSymbolByName(name, *constants, &tempSymbol))
         return firstStageErr_name_taken_define;
 
-    /* TODO: check against saved keywords */
-
-    /* make sure the value is a number */
-    if (!tryParseNumber(strVal, &doubleVal))
+    /* make sure the numberValue is a number */
+    if (!tryParseToken(strVal, &numberValue))
         return firstStageErr_value_nan_define;
 
     /* register the new constant */
-    registerConstant(constants, name, doubleVal);
-    logInfo("Registered constant '%s': %g.\n", name, doubleVal);
+    registerConstant(constants, name, numberValue);
+    
+    /* TODO: remove this debug log */
+    tempC = *(getTokEnd(name) + 1) = '\0';
+    logInfo("Registered constant '%s': %d.\n", name, numberValue);
+    *(getTokEnd(name) + 1) = tempC;
     
     return firstStageErr_no_err;
+}
+
+static void freeSymbolsList(Symbol *head) {
+    if (head == NULL)
+        return;
+    
+    freeSymbolsList(head->next);
+    free(head->name);
+    free(head);
 }

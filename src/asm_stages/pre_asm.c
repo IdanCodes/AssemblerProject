@@ -5,6 +5,7 @@
 #include "../utils/strutils.h"
 #include "../utils/fileutils.h"
 #include "../utils/charutils.h"
+#include "../utils/keywords.h"
 
 /* DOCUMENT preAssemble */
 /* fileName is the name of the file without the added extension */
@@ -37,7 +38,7 @@ enum preAssembleErr preAssemble(char fileName[]) {
         
         token = line;   /* line is already trimmed */
         if (readingMcr) {
-            if (tokcmp(token, END_MCR_INSTRUCTION) == 0) {
+            if (tokcmp(token, KEYWORD_MCR_END) == 0) {
                 readingMcr = 0;
 
                 /* error handling */
@@ -51,7 +52,7 @@ enum preAssembleErr preAssemble(char fileName[]) {
             continue; /* skip print */
         }
 
-        if (tokcmp(token, DEC_MCR_INSTRUCTION) == 0) {
+        if (tokcmp(token, KEYWORD_MCR_DEC) == 0) {
             readingMcr = 1;
 
             /* error handling */

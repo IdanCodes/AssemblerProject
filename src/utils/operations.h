@@ -33,4 +33,6 @@ typedef struct {
     char destAddrMethod[NUM_ADDR_METHODS];      /* represents a small number, using char to save storage */
 } Operation;
 
+int getOperationByName(char *name, Operation *op);
+
 #endif /* OPERATIONS */

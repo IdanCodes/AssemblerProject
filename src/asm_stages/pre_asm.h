@@ -3,9 +3,6 @@
 
 #include <stdio.h>
 
-#define DEC_MCR_INSTRUCTION "mcr"
-#define END_MCR_INSTRUCTION "endmcr"
-
 typedef struct MACRO {
     char *name;
     unsigned int startLine;

@@ -1,117 +1,118 @@
 #include "operations.h"
-#include "../utils/strutils.h"
+#include "strutils.h"
+#include "keywords.h"
 
 static Operation operations[NUM_OPERATIONS] = {
     {
         MOV_OPCODE,
-        "mov",
+        KEYWORD_OPERATION_MOV,
         { 1, 1, 1, 1 },
-        {0, 1, 1, 1},
+        { 0, 1, 1, 1 },
     },
 
     {
         CMP_OPCODE,
-        "cmp",
+        KEYWORD_OPERATION_CMP,
         { 1, 1, 1, 1 },
         { 1, 1, 1, 1 },
     },
 
     {
         ADD_OPCODE,
-        "add",
+        KEYWORD_OPERATION_ADD,
         { 1, 1, 1, 1 },
         { 0, 1, 1, 1 }
     },
 
     {
         SUB_OPCODE,
-        "sub",
+        KEYWORD_OPERATION_SUB,
         { 1, 1, 1, 1 },
         { 0, 1, 1, 1 }
     },
     
     {
         NOT_OPCODE,
-        "not",
-        { },
+        KEYWORD_OPERATION_NOT,
+        { 0, 0, 0, 0 },
         { 0, 1, 1, 1 }
     },
     
     {
         CLR_OPCODE,
-        "clr",
-        { },
+        KEYWORD_OPERATION_CLR,
+        { 0, 0, 0, 0 },
         { 0, 1, 1, 1 }
     },
     
     {
         LEA_OPCODE,
-        "lea",
+        KEYWORD_OPERATION_LEA,
         { 0, 1, 1, 0 },
         { 0, 1, 1, 1 }
     },
     
     {
         INC_OPCODE,
-        "inc",
-        { },
+        KEYWORD_OPERATION_INC,
+        { 0, 0, 0, 0 },
         { 0, 1, 1, 1 }
     },
     
     {
         DEC_OPCODE,
-        "dec",
-        { },
+        KEYWORD_OPERATION_DEC,
+        { 0, 0, 0, 0 },
         { 0, 1, 1, 1 }
     },
 
     {
         JMP_OPCODE,
-        "jmp",
-        { },
+        KEYWORD_OPERATION_JMP,
+        { 0, 0, 0, 0 },
         { 0, 1, 0, 1 }
     },
 
     {
         BNE_OPCODE,
-        "bne",
-        { },
+        KEYWORD_OPERATION_BNE,
+        { 0, 0, 0, 0 },
         { 0, 1, 0, 1 }
     },
 
     {
         RED_OPCODE,
-        "red",
-        { },
+        KEYWORD_OPERATION_RED,
+        { 0, 0, 0, 0 },
         { 0, 1, 1, 1 }
     },
 
     {
         PRN_OPCODE,
-        "prn",
-        { },
+        KEYWORD_OPERATION_PRN,
+        { 0, 0, 0, 0 },
         { 1, 1, 1, 1 }
     },
 
     {
         JSR_OPCODE,
-        "jsr",
-        { },
+        KEYWORD_OPERATION_JSR,
+        { 0, 0, 0, 0 },
         { 0, 1, 0, 1 }
     },
 
     {
         RTS_OPCODE,
-        "rts",
-        { },
-        { }
+        KEYWORD_OPERATION_RTS,
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 }
     },
 
     {
         HLT_OPCODE,
-        "hlt",
-        { },
-        { }
+        KEYWORD_OPERATION_HLT,
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 }
     }
 };
 

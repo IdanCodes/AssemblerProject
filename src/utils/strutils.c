@@ -97,6 +97,10 @@ int tokcmp(char *str1, char *str2) {
             : (str1[len] == '\0' || str1[len] == ' ') ? -1 : 1;
 }
 
+int toklen(char *tok) {
+    return (int)(getTokEnd(tok) - getStart(tok)) + 1;
+}
+
 /**
  * Get the first occurrence of a character in a string, if it doesn't exist returns the end of the string
  * @param str 
@@ -109,12 +113,12 @@ char *getFirstOrEnd(char *str, char c) {
     return str;
 }
 
-/* tryParseNumber: tries to parse a string's first token to double.
- * returns whether the parsing was successful. (whether the token is a valid double) */
-int tryParseNumber(char *str, double *number) {
-    int sign, zeroPrefix;
+/* tryParseToken: tries to parse a string's first token to double.
+ * returns whether the parsing was successful. (whether the token is a valid double)
+ * DOCUMENT */
+int tryParseToken(char *str, int *number) {
+    int sign, zeroPrefix, result;
     char *end;
-    double power, result;
 
     end = getTokEnd(str) + 1; /* character after last one */
     sign = 1;
@@ -124,10 +128,8 @@ int tryParseNumber(char *str, double *number) {
         sign = -1;
         str++;
     }
-    else if (*str == '+') {
-        sign = 1;
+    else if (*str == '+')
         str++;
-    }
 
     /* skip 0 prefix */
     zeroPrefix = (*str == '0');
@@ -137,10 +139,8 @@ int tryParseNumber(char *str, double *number) {
     if (str == end && zeroPrefix && sign > 0) /* don't accept "-0" */
         return 1;   /* just a string full of zeroes */
 
-    if ((str == end && !zeroPrefix) ||   /* if we've reached the end of the token (and there were no prefixing zeros) */
-        (!isdigit(*str) && (!zeroPrefix || *str != '.')) ||   /* if the character is not a digit and not a valid period */
-        (*str == '.' && str + 1 == end))  /* if the character is a period and the last character */
-        return 0; /* not a number */
+    if (str == end && !zeroPrefix)  /* if we've reached the end of the token (and there were no prefixing zeros) */
+        return 0;   /* not a number */
 
     /* read whole part */
     for (; str < end && *str != '.'; str++) {
@@ -149,16 +149,6 @@ int tryParseNumber(char *str, double *number) {
 
         result *= 10;
         result += *str - '0';   /* "un-ascii-fy" the char */
-    }
-
-    if ((str++) < end) {
-        /* read decimal part */
-        for (power = 1; str < end; str++) {
-            if (!isdigit(*str))
-                return 0;
-
-            result += (*str - '0') * pow(10, -(power++));
-        }
     }
 
     *number = result * sign;
