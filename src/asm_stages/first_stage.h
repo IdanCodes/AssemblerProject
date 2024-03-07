@@ -4,7 +4,7 @@
 /* make a seperate file to store keyword definitions */
 #define LABEL_MAX_LENGTH  31
 
-/* TODO: change to symbol with flags (mdefine flag for constant) */
+/* TODO: does a space have to come after a label definition? */
 typedef struct Symbol {
     char *name;
     int value;
@@ -26,7 +26,15 @@ enum firstStageErr {
     firstStageErr_value_nan_define, /* value is not a number */
     
     /* label errors */
-    firstStageErr_invalid_name_label
+    firstStageErr_invalid_name_label,   /* invalid label name */
+    firstStageErr_const_defined_in_label,   /* constant defined in a label */
+    firstStageErr_saved_keyword_label,  /* the label's name is a saved keyword */
+    firstStageErr_name_taken_label, /* name of label taken */
+    
+    /* .data errors */
+    firstStageErr_data_nan, /* data parameter is not a number */
+    firstStageErr_data_comma_expected,  /* comma expected between arguments */
+    firstStageErr_data_const_not_found  /* constant referenced was not found */
 };
 
 void assemblerFirstStage(char fileName[]);

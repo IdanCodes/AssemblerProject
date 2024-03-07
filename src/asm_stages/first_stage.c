@@ -5,8 +5,6 @@
 #include "../utils/strutils.h"
 #include "../utils/charutils.h"
 #include "../utils/logger.h"
-#include "../utils/strutils.h"
-#include "../utils/operations.h"
 #include "../utils/keywords.h"
 
 static void freeSymbolsList(Symbol *head);
@@ -14,17 +12,21 @@ static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine
 static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol);
 static void registerConstant(Symbol **head, char *name, int value);
 static enum firstStageErr fetchConstant(char *line, Symbol **constants);
+static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data);
+static enum firstStageErr fetchData(char *lblName, char *token, int *dataCounter, Symbol **symbols, int **data);
+static void addSymToList(Symbol **head, Symbol *symbol);
 
 /* DOCUMENT */
 /* fileName is the file's name without the extension */
 void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
-    unsigned int /*instructionCounter, dataCounter, */sourceLine, skippedLines;
-    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *token, *tokEnd;
+    unsigned int sourceLine, skippedLines;
+    int dataCounter/*, instructionCounter*/;
+    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *labelName, *token, *tokEnd;
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len, labelDefinition;
+    int len, labelDefinition, i, *data;
     FILE *sourcef;
-    Symbol *symbols;
+    Symbol *symbols, *tempSymb;
     enum firstStageErr err;
     
     
@@ -36,20 +38,18 @@ void assemblerFirstStage(char fileName[]) {
     
     
     /* -- main loop -- */
-    /*instructionCounter = 0;
-    dataCounter = 0;*/
+    /*instructionCounter = 0;*/
+    dataCounter = 0;
+    data = (int *)malloc(sizeof(int));
+    if (data == NULL)
+        terminalError(1, "Insufficient memory\n");
+    
     sourceLine = 0;
     symbols = NULL;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
+        labelDefinition = 0;
         sourceLine += skippedLines;
         token = getStart(line);
-        
-        /* constant declaration? */
-        if (tokcmp(token, KEYWORD_CONST_DEC) == 0) {
-            if ((err = fetchConstant(line, &symbols)) != firstStageErr_no_err)
-                printFirstStageError(err, sourceLine);
-            continue;
-        }
         
         /* label declaration? */
         if (*(tokEnd = getTokEnd(token)) == LABEL_END_CHAR) {
@@ -57,14 +57,60 @@ void assemblerFirstStage(char fileName[]) {
                 printFirstStageError(firstStageErr_invalid_name_label, sourceLine);
                 continue;
             }
-            logInfo("Defining label in line %d\n", sourceLine);
+            
+            /* save label name */
+            labelName = (char *)malloc(sizeof(char [LABEL_MAX_LENGTH]));
+            if (labelName == NULL)
+                terminalError(1, "Insufficient memory\n");
+            
+            for (i = 0; i < tokEnd - token; i++)
+                labelName[i] = token[i];
+            labelName[i] = '\0';
+            
+            if (isSavedKeyword(labelName)) {
+                printFirstStageError(firstStageErr_saved_keyword_label, sourceLine);
+                continue;
+            }
+            
+            if (getSymbolByName(labelName, symbols, &tempSymb)) {
+                printFirstStageError(firstStageErr_name_taken_label, sourceLine);
+                continue;
+            }
+
+            logInfo("Defining label '%s' in line %d\n", labelName, sourceLine);
             labelDefinition = 1;
+            
             token = getNextToken(token);
             /* TODO: check if it is allowed to define a label on an empty line, and check for an empty line */
         }
+
+        /* constant declaration? */
+        if (tokcmp(token, KEYWORD_CONST_DEC) == 0) {
+            if (labelDefinition)
+                printFirstStageError(firstStageErr_const_defined_in_label, sourceLine);
+            else if ((err = fetchConstant(line, &symbols)) != firstStageErr_no_err)
+                printFirstStageError(err, sourceLine);
+            continue;
+        }
         
+        /* storage instruction? */
+        if (tokcmp(token, KEYWORD_DATA_DEC) == 0) {
+            /* TODO: move this into its own function, fetchData */
+            if ((err = fetchData(labelDefinition ? labelName : "", token, &dataCounter, &symbols, &data)) != firstStageErr_no_err)
+                printFirstStageError(err, sourceLine);
+            if (labelDefinition)
+                logInfo("Added data '%s' - new data counter %d\n", labelName, dataCounter);
+            else
+                logInfo("Added unnamed data - new data counter %d\n", dataCounter);
+            continue;
+        }
+        
+        if (tokcmp(token, KEYWORD_STRING_DEC) == 0) {
+            
+        }
     }
 
+    free(data);
     freeSymbolsList(symbols);
 }
 
@@ -100,7 +146,7 @@ static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol) {
 }
 
 static void registerConstant(Symbol **head, char *name, int value) {
-    Symbol *pConst, *temp;
+    Symbol *pConst;
 
     pConst = (Symbol *)malloc(sizeof(Symbol));
     if (pConst == NULL)
@@ -113,16 +159,7 @@ static void registerConstant(Symbol **head, char *name, int value) {
     pConst->value = value;
     pConst->mdefine = 1;
     
-    if (*head == NULL) {
-        *head = pConst;
-        return;
-    }
-    
-    temp = *head;
-    while (temp->next != NULL)
-        temp = temp->next;
-
-    temp->next = pConst;
+    addSymToList(head, pConst);
 }
 
 static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
@@ -184,4 +221,84 @@ static void freeSymbolsList(Symbol *head) {
     freeSymbolsList(head->next);
     free(head->name);
     free(head);
+}
+
+/* token is the first number parameter */
+static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data) {
+    int num;
+    char temp, *end;
+    Symbol *tempSym;
+    
+    token = getStart(token);
+    while (*token != '\0') {
+        end = getFirstOrEnd(token, ',');
+        
+        if (*end != '\0' && getTokEnd(token) < end)
+            return firstStageErr_data_comma_expected;
+        
+        temp = *end;
+        *end = '\0';
+        
+        if (!tryParseToken(token, &num)) {
+            if (validSymbolName(token, end - 1)) {
+                if (!getSymbolByName(token, symbols, &tempSym) || !tempSym->mdefine)
+                    return firstStageErr_data_const_not_found;
+                logInfo("USING DATA FROM '%s' = %d\n", token, tempSym->value);
+                num = tempSym->value;
+            }
+            else
+                return firstStageErr_data_nan;
+        }
+        *end = temp;
+        token = getNextToken(end);
+        
+        /* store the number into memory and increment data counter */
+        *data = (int *)realloc(*data, sizeof(int) * (*dataCounter));
+        (*data)[*dataCounter] = num;
+        (*dataCounter)++;
+    }
+    
+    return firstStageErr_no_err;
+}
+
+static enum firstStageErr fetchData(char *lblName, char *token, int *dataCounter, Symbol **symbols, int **data) {
+    enum firstStageErr err;
+    Symbol *newS;
+    int prevDC;
+
+    prevDC = *dataCounter;
+    if ((err = storeDataArgs(getNextToken(token), dataCounter, *symbols, data)) != firstStageErr_no_err)
+        return err;
+    
+    if (*lblName == '\0')
+        return firstStageErr_no_err;
+    
+    newS = (Symbol *)malloc(sizeof(Symbol));
+    if (newS == NULL)
+        terminalError(1, "Insufficient memory\n");
+    
+    newS->name = strdup(lblName);
+    if (newS->name == NULL)
+        terminalError(1, "Insufficient memory\n");
+    
+    newS->value = prevDC;
+    newS->mdefine = 0;
+
+    addSymToList(symbols, newS);
+    return firstStageErr_no_err;
+}
+
+static void addSymToList(Symbol **head, Symbol *symbol) {
+    Symbol *temp;
+    
+    if (*head == NULL) {
+        *head = symbol;
+        return;
+    }
+
+    temp = *head;
+    while (temp->next != NULL)
+        temp = temp->next;
+
+    temp->next = symbol;
 }

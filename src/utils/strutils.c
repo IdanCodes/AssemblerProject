@@ -69,12 +69,12 @@ char *getTokEnd(char *tok) {
 }
 
 /**
- * Get the next token in the string
+ * Get the next token in the string. If the given pointer points to the last character of a string, it will be returned.
  * @param tok the given token
  * @return the pointer to the next token in the string
  */
 char *getNextToken(char *tok) {
-    return getStart(getTokEnd(tok) + 1);
+    return *tok == '\0' ? tok : getStart(getTokEnd(tok) + 1);
 }
 
 /**
