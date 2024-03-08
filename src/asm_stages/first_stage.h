@@ -43,7 +43,14 @@ enum firstStageErr {
     /* .string errors */
     firstStageErr_string_expected_quotes,   /* quotes missing after .string */
     firstStageErr_string_expected_end_quotes,   /* quotes missing at end of .string definition */
-    firstStageErr_string_extra_chars    /* extra characters after closing quotes */
+    firstStageErr_string_extra_chars,   /* extra characters after closing quotes */
+    
+    /* .extern errors */
+    firstStageErr_extern_invalid_lbl_name,  /* the .extern parameter is not a valid name for a label */ 
+    firstStageErr_extern_extra_chars,   /* extra characters at the end of an extern instruction */
+    firstStageErr_extern_def_label_same_name,   /* defining label with the same name as the .extern parameter */
+    firstStageErr_extern_label_exists,  /* the label is already defined in the file */
+    firstStageErr_extern_saved_keyword
 };
 
 void assemblerFirstStage(char fileName[]);

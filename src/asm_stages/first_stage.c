@@ -27,7 +27,7 @@ void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     int dataCounter/*, instructionCounter*/;
-    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *labelName, *token, *tokEnd;
+    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *labelName, *token, *tokEnd, temp;
     char line[MAXLINE + 1]; /* account for '\0' */
     int len, i, *data;
     FILE *sourcef;
@@ -131,7 +131,44 @@ void assemblerFirstStage(char fileName[]) {
         }
         
         if (tokcmp(token, KEYWORD_EXTERN_DEC) == 0) {
+            /* TODO: check if there can be multiple extern labels in one .extern instruction */
+            token = getNextToken(token);
+            if (!validSymbolName(token, getTokEnd(tokEnd = getTokEnd(token)))) {
+                printFirstStageError(firstStageErr_extern_invalid_lbl_name, sourceLine);
+                continue;
+            }
             
+            if (*getNextToken(token) != '\0') {
+                printFirstStageError(firstStageErr_extern_extra_chars, sourceLine);
+                continue;
+            }
+            
+            temp = *(tokEnd + 1);
+            *(tokEnd + 1) = '\0';
+            
+            if (labelName != NULL && tokcmp(labelName, token) == 0) {
+                printFirstStageError(firstStageErr_extern_def_label_same_name, sourceLine);
+                *(tokEnd + 1) = temp;
+                continue;
+            }
+            
+            if (isSavedKeyword(token)) {
+                printFirstStageError(firstStageErr_extern_saved_keyword, sourceLine);
+            }
+            
+            if (getSymbolByName(token, symbols, &tempSymb)){
+                printFirstStageError(firstStageErr_extern_label_exists, sourceLine);
+                continue;
+            }
+                
+            *(tokEnd + 1) = temp;
+            
+            tempSymb = allocSymbol(token, tokEnd + 1);
+            tempSymb->flag = SYMBOL_FLAG_EXTERN;
+            
+            addSymToList(&symbols, tempSymb);
+            logInfo("Added extern variable '%s'\n", token);
+            continue;
         }
     }
 
@@ -383,7 +420,7 @@ static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *
         return firstStageErr_data_nan;
     }
     
-    if (!getSymbolByName(start, symbols, &tempSym) || !tempSym->mdefine) {
+    if (!getSymbolByName(start, symbols, &tempSym) || (tempSym->flag & SYMBOL_FLAG_MDEFINE) == 0) {
         *end = temp;
         return firstStageErr_data_const_not_found;
     }

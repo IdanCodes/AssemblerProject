@@ -15,3 +15,4 @@
 
 MYSTR: .string "a"
 meow: .data 16, -12
+MEOW: .extern hola
