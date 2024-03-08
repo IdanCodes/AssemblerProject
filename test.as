@@ -9,6 +9,9 @@
 
 ; prn END_STR
 
-.define meow = 4
-MYARR: .data 2, meow, 4
-.data 21, -12
+; .define meow = 4
+; MYARR: .data 2, meow, 4
+; .data 21, -12
+
+MYSTR: .string "a"
+meow: .data 16, -12

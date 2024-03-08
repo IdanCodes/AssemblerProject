@@ -35,7 +35,12 @@ enum firstStageErr {
     /* .data errors */
     firstStageErr_data_nan, /* data parameter is not a number */
     firstStageErr_data_comma_expected,  /* comma expected between arguments */
-    firstStageErr_data_const_not_found  /* constant referenced was not found */
+    firstStageErr_data_const_not_found, /* constant referenced was not found */
+    
+    /* .string errors */
+    firstStageErr_string_expected_quotes,   /* quotes missing after .string */
+    firstStageErr_string_expected_end_quotes,   /* quotes missing at end of .string definition */
+    firstStageErr_string_extra_chars    /* extra characters after closing quotes */
 };
 
 void assemblerFirstStage(char fileName[]);
