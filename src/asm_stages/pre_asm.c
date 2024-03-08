@@ -60,12 +60,19 @@ enum preAssembleErr preAssemble(char fileName[]) {
                 preAsmErr = preAssembleErr_mcr_expected;
                 break;
             }
+            
             if (*getNextToken(token) != '\0') {
                 preAsmErr = preAssembleErr_unexpected_chars_dec;
                 break;
             }
+            
             if (getMacroWithName(token, head) != NULL) {
                 preAsmErr = preAssembleErr_macro_exists;
+                break;
+            }
+            
+            if (isSavedKeyword(token)) {
+                preAsmErr = preAssembleErr_macro_saved_name;
                 break;
             }
 
@@ -127,6 +134,8 @@ char *preAsmErrMessage(enum preAssembleErr err) {
             return "Unexpected characters after macro call";
         case preAssembleErr_macro_exists:
             return "Macro name already used";
+        case preAssembleErr_macro_saved_name:
+            return "Macro name is a saved keyword";
             
         default:
             return "";

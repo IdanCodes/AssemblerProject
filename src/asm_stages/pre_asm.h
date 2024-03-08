@@ -16,7 +16,8 @@ enum preAssembleErr {
     preAssembleErr_unexpected_chars_dec,
     preAssembleErr_unexpected_chars_end,
     preAssembleErr_unexpected_chars_ref,
-    preAssembleErr_macro_exists
+    preAssembleErr_macro_exists,
+    preAssembleErr_macro_saved_name
 };
 
 enum preAssembleErr preAssemble(char fileName[]);

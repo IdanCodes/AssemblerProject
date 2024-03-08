@@ -7,6 +7,8 @@
 #define KEYWORD_CONST_DEC   ".define"
 #define KEYWORD_DATA_DEC    ".data"
 #define KEYWORD_STRING_DEC  ".string"
+#define KEYWORD_EXTERN_DEC  ".extern"
+#define KEYWORD_ENTRY_DEC   ".entry"
 
 #define KEYWORD_REGISTER_PREFIX "r"
 #define REGISTER_FIRST  1

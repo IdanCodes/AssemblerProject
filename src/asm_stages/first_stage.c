@@ -129,6 +129,10 @@ void assemblerFirstStage(char fileName[]) {
             }
             continue;
         }
+        
+        if (tokcmp(token, KEYWORD_EXTERN_DEC) == 0) {
+            
+        }
     }
 
     
@@ -199,7 +203,7 @@ static void registerConstant(Symbol **head, char *name, int value) {
 
     sym = allocSymbol(name, getTokEnd(name) + 1);
     sym->value = value;
-    sym->mdefine = 1;
+    sym->flag = SYMBOL_FLAG_MDEFINE;
     
     addSymToList(head, sym);
 }
@@ -212,7 +216,7 @@ static void registerData(Symbol **head, char *lblName, int value) {
     
     newS = allocSymbol(lblName, getTokEnd(lblName) + 1);
     newS->value = value;
-    newS->mdefine = 0;
+    newS->flag = 0; /* TODO: CHANGE TO USE DATA FLAG */
 
     addSymToList(head, newS);
 }

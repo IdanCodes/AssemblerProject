@@ -4,11 +4,14 @@
 /* make a seperate file to store keyword definitions */
 #define LABEL_MAX_LENGTH  31
 
+#define SYMBOL_FLAG_MDEFINE 1
+#define SYMBOL_FLAG_EXTERN 2
+
 /* TODO: does a space have to come after a label definition? */
 typedef struct Symbol {
     char *name;
     int value;
-    int mdefine;
+    int flag;
     struct Symbol *next;
 } Symbol;
 
