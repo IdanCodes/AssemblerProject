@@ -14,6 +14,7 @@ static void registerConstant(Symbol **head, char *name, int value);
 static enum firstStageErr fetchConstant(char *line, Symbol **constants);
 static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data);
 static enum firstStageErr fetchData(char *lblName, char *token, int *dataCounter, Symbol **symbols, int **data);
+static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
 static void addSymToList(Symbol **head, Symbol *symbol);
 
 /* DOCUMENT */
@@ -76,12 +77,15 @@ void assemblerFirstStage(char fileName[]) {
                 printFirstStageError(firstStageErr_name_taken_label, sourceLine);
                 continue;
             }
-
-            logInfo("Defining label '%s' in line %d\n", labelName, sourceLine);
-            labelDefinition = 1;
             
+            labelDefinition = 1;
             token = getNextToken(token);
-            /* TODO: check if it is allowed to define a label on an empty line, and check for an empty line */
+            
+            /* empty line */
+            if (*token == '\0') {
+                printFirstStageError(firstStageErr_label_empty_line, sourceLine);
+                continue;
+            }
         }
 
         /* constant declaration? */
@@ -95,7 +99,6 @@ void assemblerFirstStage(char fileName[]) {
         
         /* storage instruction? */
         if (tokcmp(token, KEYWORD_DATA_DEC) == 0) {
-            /* TODO: move this into its own function, fetchData */
             if ((err = fetchData(labelDefinition ? labelName : "", token, &dataCounter, &symbols, &data)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine);
             if (labelDefinition)
@@ -146,15 +149,21 @@ static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol) {
 }
 
 static void registerConstant(Symbol **head, char *name, int value) {
+    char temp, *end;
     Symbol *pConst;
 
     pConst = (Symbol *)malloc(sizeof(Symbol));
     if (pConst == NULL)
         terminalError(1, "Insufficient memory\n");
-
+    
+    temp = *(end = (getTokEnd(name) + 1));
+    *end = '\0'; /* to use strdup */
+    
     pConst->name = strdup(name);
     if (pConst->name == NULL)
         terminalError(1, "Insufficient memory\n");
+    
+    *end = temp;
 
     pConst->value = value;
     pConst->mdefine = 1;
@@ -226,8 +235,8 @@ static void freeSymbolsList(Symbol *head) {
 /* token is the first number parameter */
 static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data) {
     int num;
-    char temp, *end;
-    Symbol *tempSym;
+    char *end;
+    enum firstStageErr err;
     
     token = getStart(token);
     while (*token != '\0') {
@@ -235,25 +244,17 @@ static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *s
         
         if (*end != '\0' && getTokEnd(token) < end)
             return firstStageErr_data_comma_expected;
+
+        if ((err = fetchNumber(token, end, &num, symbols)) != firstStageErr_no_err)
+            return err;
         
-        temp = *end;
-        *end = '\0';
-        
-        if (!tryParseToken(token, &num)) {
-            if (validSymbolName(token, end - 1)) {
-                if (!getSymbolByName(token, symbols, &tempSym) || !tempSym->mdefine)
-                    return firstStageErr_data_const_not_found;
-                logInfo("USING DATA FROM '%s' = %d\n", token, tempSym->value);
-                num = tempSym->value;
-            }
-            else
-                return firstStageErr_data_nan;
-        }
-        *end = temp;
         token = getNextToken(end);
         
         /* store the number into memory and increment data counter */
         *data = (int *)realloc(*data, sizeof(int) * (*dataCounter));
+        if (*data == NULL)
+            terminalError(1, "Insufficient memory\n");
+        
         (*data)[*dataCounter] = num;
         (*dataCounter)++;
     }
@@ -285,6 +286,45 @@ static enum firstStageErr fetchData(char *lblName, char *token, int *dataCounter
     newS->mdefine = 0;
 
     addSymToList(symbols, newS);
+    return firstStageErr_no_err;
+}
+
+/**
+ * Fetch a number from the start pointer to the given end, result is saved into num.
+ * Uses parsing, if the string is not a number tries to find a constant with the same name.
+ * @param start The start of the string
+ * @param end The end of the string
+ * @param num A pointer to the number
+ * @param symbols The list of symbols in the program
+ * @return The error (if there wasn't an error returns firstStageErr_no_err)
+ */
+static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols) {
+    char temp;
+    Symbol *tempSym;
+    
+    /* some methods used here need '\0' string termination */
+    temp = *end;
+    *end = '\0';
+    
+    if (tryParseToken(start, num)) {
+        *end = temp;
+        return firstStageErr_no_err;
+    }
+
+    if (!validSymbolName(start, end - 1)) {
+        *end = temp;
+        return firstStageErr_data_nan;
+    }
+    
+    if (!getSymbolByName(start, symbols, &tempSym) || !tempSym->mdefine) {
+        *end = temp;
+        return firstStageErr_data_const_not_found;
+    }
+    
+    logInfo("USING DATA FROM '%s' = %d\n", start, tempSym->value);
+    *num = tempSym->value;
+
+    *end = temp;
     return firstStageErr_no_err;
 }
 

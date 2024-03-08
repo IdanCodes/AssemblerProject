@@ -30,6 +30,7 @@ enum firstStageErr {
     firstStageErr_const_defined_in_label,   /* constant defined in a label */
     firstStageErr_saved_keyword_label,  /* the label's name is a saved keyword */
     firstStageErr_name_taken_label, /* name of label taken */
+    firstStageErr_label_empty_line, /* label defined on an empty line */
     
     /* .data errors */
     firstStageErr_data_nan, /* data parameter is not a number */
