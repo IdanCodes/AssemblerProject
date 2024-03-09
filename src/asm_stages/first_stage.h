@@ -5,7 +5,8 @@
 #define LABEL_MAX_LENGTH  31
 
 #define SYMBOL_FLAG_MDEFINE 1
-#define SYMBOL_FLAG_EXTERN 2
+#define SYMBOL_FLAG_EXTERN  2
+#define SYMBOL_FLAG_CODE    4
 
 /* TODO: does a space have to come after a label definition? */
 typedef struct Symbol {
