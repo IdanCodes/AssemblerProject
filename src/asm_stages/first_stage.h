@@ -3,12 +3,13 @@
 
 /* make a seperate file to store keyword definitions */
 #define LABEL_MAX_LENGTH  31
+#define INSTRUCTION_COUNTER_OFFSET  100
 
 #define SYMBOL_FLAG_MDEFINE 1
-#define SYMBOL_FLAG_EXTERN  2
-#define SYMBOL_FLAG_CODE    4
+#define SYMBOL_FLAG_CODE    2
+#define SYMBOL_FLAG_EXTERN  4
+#define SYMBOL_FLAG_DATA    8
 
-/* TODO: does a space have to come after a label definition? */
 typedef struct Symbol {
     char *name;
     int value;
@@ -40,6 +41,7 @@ enum firstStageErr {
     firstStageErr_data_nan, /* data parameter is not a number */
     firstStageErr_data_comma_expected,  /* comma expected between arguments */
     firstStageErr_data_const_not_found, /* constant referenced was not found */
+    firstStageErr_data_argument_expected,   /* argument expected in data */
     
     /* .string errors */
     firstStageErr_string_expected_quotes,   /* quotes missing after .string */
@@ -51,7 +53,10 @@ enum firstStageErr {
     firstStageErr_extern_extra_chars,   /* extra characters at the end of an extern instruction */
     firstStageErr_extern_def_label_same_name,   /* defining label with the same name as the .extern parameter */
     firstStageErr_extern_label_exists,  /* the label is already defined in the file */
-    firstStageErr_extern_saved_keyword
+    firstStageErr_extern_saved_keyword, /* extern label is a saved keyword */
+    
+    /* operator errors */
+    firstStageErr_operator_not_found    /* invalid operator name */
 };
 
 void assemblerFirstStage(char fileName[]);

@@ -6,6 +6,7 @@
 #include "../utils/charutils.h"
 #include "../utils/logger.h"
 #include "../utils/keywords.h"
+#include "../utils/operations.h"
 
 static void freeSymbolsList(Symbol *head);
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, ...); /* TODO: implement */
@@ -33,6 +34,7 @@ void assemblerFirstStage(char fileName[]) {
     int len, i, *data;
     FILE *sourcef;
     Symbol *symbols, *tempSymb;
+    Operation operation;
     enum firstStageErr err;
     
     
@@ -137,6 +139,12 @@ void assemblerFirstStage(char fileName[]) {
                 printFirstStageError(err, sourceLine);
             continue;
         }
+        
+        /* is this an invalid operation? */
+        if (!getOperationByName(token, &operation)) {
+            printFirstStageError(firstStageErr_operator_not_found, sourceLine);
+            continue;
+        }
     }
 
     
@@ -158,7 +166,7 @@ static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine
 
 /* is the token a valid name for a symbol */
 int validSymbolName(char *tok, char *end) {
-    if (end <= tok || (end - tok) >= LABEL_MAX_LENGTH ||  /* invalid length */
+    if (end < tok || (end - tok) >= LABEL_MAX_LENGTH ||  /* invalid length */
         !isalpha(*tok))    /* first character is not alphabetic */
         return 0;
 
@@ -219,8 +227,8 @@ static void registerDataSymbol(Symbol **head, char *lblName, int value) {
         return;
     
     newS = allocSymbol(lblName, getTokEnd(lblName) + 1);
-    newS->value = value;
-    newS->flag = 0; /* TODO: CHANGE TO USE DATA FLAG */
+    newS->value = INSTRUCTION_COUNTER_OFFSET + value;
+    newS->flag = SYMBOL_FLAG_DATA;
 
     addSymToList(head, newS);
 }
@@ -280,20 +288,32 @@ static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
 /* token is the first number parameter */
 static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data) {
     int num;
-    char *end;
+    char *end, *next, *valEnd;
     enum firstStageErr err;
     
     token = getStart(token);
+    if (*token == '\0')
+        return firstStageErr_data_argument_expected;
+    
     while (*token != '\0') {
-        end = getFirstOrEnd(token, ',');
+        if (*token == ',')
+            return firstStageErr_data_argument_expected;
         
-        if (*end != '\0' && getTokEnd(token) < end)
+        end = getFirstOrEnd(token, ',');
+        next = (*end != '\0') ? getStart(end + 1) : getNextToken(token);
+        
+        if ((*end != '\0' && end > next) || (*end == '\0' && *next != '\0'))
             return firstStageErr_data_comma_expected;
-
-        if ((err = fetchNumber(token, end, &num, symbols)) != firstStageErr_no_err)
+        
+        if (*next == ',' || *end != '\0' && *next == '\0')
+            return firstStageErr_data_argument_expected;
+        
+        valEnd = getTokEnd(token) + 1;
+        valEnd = valEnd < end ? valEnd : end;   /* whatever comes first: the ',' char or the end of the token */
+        if ((err = fetchNumber(token, valEnd, &num, symbols)) != firstStageErr_no_err)
             return err;
         
-        token = getNextToken(end);
+        token = next;
         
         /* store the number into memory and increment data counter */
         *data = (int *)realloc(*data, sizeof(int) * (*dataCounter));

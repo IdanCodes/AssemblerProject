@@ -143,7 +143,7 @@ int tryParseToken(char *str, int *number) {
         return 0;   /* not a number */
 
     /* read whole part */
-    for (; str < end && *str != '.'; str++) {
+    for (; str < end; str++) {
         if (!isdigit(*str))    /* not a digit nor a '.' */
             return 0;
 
