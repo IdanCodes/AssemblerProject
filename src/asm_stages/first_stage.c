@@ -10,16 +10,19 @@
 
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName);
 static char *getErrMessage(enum firstStageErr err);
+static int symbolInList(Symbol *head, char *name);
 static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol);
 static Symbol *allocSymbol(char *nameStart, char *nameEnd);
 static void registerConstant(Symbol **head, char *name, int value);
-static void registerDataSymbol(Symbol **head, char *lblName, int value);
-static enum firstStageErr fetchConstant(char *line, Symbol **constants);
+static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value);
+static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbols, Symbol **pLblSymbol);
+static enum firstStageErr fetchConstant(char *line, Symbol **symbols);
 static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data);
 static enum firstStageErr fetchData(char *lblName, char *token, int *dataCounter, Symbol **symbols, int **data);
+static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
 static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter, int **data);
-static enum firstStageErr fetchString(char *lblName, char *token, int *dataCounter, Symbol **symbols, int **data);
-static enum firstStageErr fetchExtern(char *lblName, char *token, Symbol *symbols);
+static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
+static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblSym);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
 static void addSymToList(Symbol **head, Symbol *symbol);
 static void freeSymbolsList(Symbol *head);
@@ -29,12 +32,12 @@ static void freeSymbolsList(Symbol *head);
 void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
-    int dataCounter/*, instructionCounter*/;
-    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *labelName, *token, *tokEnd, *sqrBracksOpen, *indexStart, *indexEnd, *sqrBracksClose, temp;
+    int dataCounter, instructionCounter;
+    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *token, *tokEnd, *sqrBracksOpen, *indexStart, *indexEnd, *sqrBracksClose, temp;
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len, i, *data, num, operandIndex;
+    int len, *data, num, operandIndex;
     FILE *sourcef;
-    Symbol *symbols, *tempSymb;
+    Symbol *symbols, *labelSymbol;
     Operation operation;
     enum firstStageErr err;
     
@@ -47,20 +50,24 @@ void assemblerFirstStage(char fileName[]) {
     
     
     /* -- main loop -- */
-    /*instructionCounter = 0;*/
+    instructionCounter = 0;
     dataCounter = 0;
     data = (int *)malloc(sizeof(int));
     if (data == NULL)
         terminalError(1, "Insufficient memory\n");
     
     sourceLine = 0;
-    labelName = NULL;
+    labelSymbol = NULL;
     symbols = NULL;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine += skippedLines;
-        if (labelName != NULL) {    /* free previous label */
-            free(labelName);
-            labelName = NULL;
+        /* if the previous symbol wasn't used, free it */
+        if (labelSymbol != NULL) {
+            if (!symbolInList(symbols, labelSymbol->name)) {
+                free(labelSymbol->name);
+                free(labelSymbol);
+            }
+            labelSymbol = NULL;
         }
         
         token = getStart(line);
@@ -69,44 +76,15 @@ void assemblerFirstStage(char fileName[]) {
         /* if this is a valid (label) declaration, there must be a white character seperating the label name and the rest of the line */
         if (*(tokEnd = getTokEnd(token)) == LABEL_END_CHAR) 
         {
-            /* TODO: turn this to a function */
-            /* TODO: store the label in the symbols list even if the rest of the line throws an error */
-            if (!validSymbolName(token, tokEnd - 1)) {
-                printFirstStageError(firstStageErr_label_invalid_name, sourceLine, sourceFileName);
-                continue;
-            }
-            
-            /* save label name */
-            labelName = (char *)malloc(sizeof(char [LABEL_MAX_LENGTH]));
-            if (labelName == NULL)
-                terminalError(1, "Insufficient memory\n");
-            
-            for (i = 0; i < tokEnd - token; i++)
-                labelName[i] = token[i];
-            labelName[i] = '\0';
-            
-            if (isSavedKeyword(labelName)) {
-                printFirstStageError(firstStageErr_label_saved_keyword, sourceLine, sourceFileName);
-                continue;
-            }
-            
-            if (getSymbolByName(labelName, symbols, &tempSymb)) {
-                printFirstStageError(firstStageErr_label_name_taken, sourceLine, sourceFileName);
-                continue;
-            }
-            
-            token = getNextToken(token);
-            
-            /* empty line */
-            if (*token == '\0') {
-                printFirstStageError(firstStageErr_label_empty_line, sourceLine, sourceFileName);
+            if ((err = fetchLabel(&token, tokEnd, &symbols, &labelSymbol)) != firstStageErr_no_err) {
+                printFirstStageError(err, sourceLine, sourceFileName);
                 continue;
             }
         }
 
         /* constant declaration? */
         if (tokcmp(token, KEYWORD_CONST_DEC) == 0) {
-            if (labelName != NULL)
+            if (labelSymbol != NULL)
                 printFirstStageError(firstStageErr_label_const_definition, sourceLine, sourceFileName);
             else if ((err = fetchConstant(line, &symbols)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine, sourceFileName);
@@ -116,11 +94,11 @@ void assemblerFirstStage(char fileName[]) {
         /* storage instruction? */
         /* .data */
         if (tokcmp(token, KEYWORD_DATA_DEC) == 0) {
-            if ((err = fetchData(labelName, token, &dataCounter, &symbols, &data)) != firstStageErr_no_err)
+            if ((err = fetchData(token, &dataCounter, &symbols, &data, labelSymbol)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine, sourceFileName);
             else {
-                if (labelName != NULL)
-                    logInfo("Added data '%s' - new data counter %d\n", labelName, dataCounter);
+                if (labelSymbol != NULL)
+                    logInfo("Added data '%s' - new data counter %d\n", labelSymbol->name, dataCounter);
                 else
                     logInfo("Added unnamed data - new data counter %d\n", dataCounter);
             }
@@ -129,11 +107,11 @@ void assemblerFirstStage(char fileName[]) {
         
         /* .string */
         if (tokcmp(token, KEYWORD_STRING_DEC) == 0) {
-            if ((err = fetchString(labelName, token, &dataCounter, &symbols, &data)) != firstStageErr_no_err)
+            if ((err = fetchString(token, &dataCounter, &symbols, &data, labelSymbol)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine, sourceFileName);
             else {
-                if (labelName != NULL)
-                    logInfo("Added string '%s' - new data counter %d (line %u)\n", labelName, dataCounter, sourceLine);
+                if (labelSymbol != NULL)
+                    logInfo("Added string '%s' - new data counter %d (line %u)\n", labelSymbol->name, dataCounter, sourceLine);
                 else
                     logInfo("Added unnamed string - new data counter %d (line %u)\n", dataCounter, sourceLine);
             }
@@ -142,7 +120,7 @@ void assemblerFirstStage(char fileName[]) {
         
         /* .extern instruction? */
         if (tokcmp(token, KEYWORD_EXTERN_DEC) == 0) {
-            if ((err = fetchExtern(labelName, token, symbols)) != firstStageErr_no_err)
+            if ((err = fetchExtern(token, symbols, labelSymbol)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine, sourceFileName);
             continue;
         }
@@ -151,6 +129,13 @@ void assemblerFirstStage(char fileName[]) {
         if (!getOperationByName(token, &operation)) {
             printFirstStageError(firstStageErr_operation_not_found, sourceLine, sourceFileName);
             continue;
+        }
+
+        /* add the symbol to the symbols list */
+        if (labelSymbol != NULL) {
+            labelSymbol->value = instructionCounter;
+            labelSymbol->flag = SYMBOL_FLAG_CODE;
+            addSymToList(&symbols, labelSymbol);
         }
         
         /* fetch operands */
@@ -295,9 +280,9 @@ void assemblerFirstStage(char fileName[]) {
     
     /* -- cleanup -- */
     
-    if (labelName != NULL) {    /* free previous label */
-        free(labelName);
-        labelName = NULL;
+    if (labelSymbol != NULL && !symbolInList(symbols, labelSymbol->name)) {   /* free previous label */
+        free(labelSymbol->name);
+        free(labelSymbol);
     }
 
     free(data);
@@ -387,7 +372,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "invalid label name for extern label";
             
         case firstStageErr_extern_extra_chars:
-            return "extra characters following label";
+            return "extra characters following external label";
             
         case firstStageErr_extern_def_label_same_name:
             ;   /* fall through */
@@ -469,6 +454,11 @@ static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol) {
     return 0;
 }
 
+static int symbolInList(Symbol *head, char *name) {
+    Symbol *tempSym;
+    return getSymbolByName(name, head, &tempSym);
+}
+
 /* nameEnd is the first character outside the name (name string is [name, end-1]) */
 static Symbol *allocSymbol(char *nameStart, char *nameEnd) {
     Symbol *newS;
@@ -499,23 +489,53 @@ static void registerConstant(Symbol **head, char *name, int value) {
     addSymToList(head, sym);
 }
 
-static void registerDataSymbol(Symbol **head, char *lblName, int value) {
-    Symbol *newS;
-    
-    if (lblName == NULL)
+static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value) {
+    if (lblSym == NULL)
         return;
     
-    newS = allocSymbol(lblName, getTokEnd(lblName) + 1);
-    newS->value = INSTRUCTION_COUNTER_OFFSET + value;
-    newS->flag = SYMBOL_FLAG_DATA;
+    lblSym->value = value;
+    lblSym->flag = SYMBOL_FLAG_DATA;
 
-    addSymToList(head, newS);
+    addSymToList(head, lblSym);
 }
 
-static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
+static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbols, Symbol **pLblSymbol) {
+    int i;
+    char *labelName;
+    
+    /* TODO: store the label in the symbols list even if the rest of the line throws an error */
+    if (!validSymbolName(*token, tokEnd - 1))
+        return firstStageErr_label_invalid_name;
+
+    /* save label name */
+    labelName = (char *)malloc(sizeof(char [LABEL_MAX_LENGTH]));
+    if (labelName == NULL)
+        terminalError(1, "Insufficient memory\n");
+
+    for (i = 0; i < tokEnd - (*token); i++)
+        (labelName)[i] = (*token)[i];
+    (labelName)[i] = '\0';
+
+    *pLblSymbol = allocSymbol(labelName, getTokEnd(labelName) + 1);
+
+    if (isSavedKeyword(labelName))
+        return firstStageErr_label_saved_keyword;
+
+    if (symbolInList(*symbols, labelName))
+        return firstStageErr_label_name_taken;
+
+    *token = getNextToken(*token);
+
+    /* empty line */
+    if (**token == '\0')
+        return firstStageErr_label_empty_line;
+    
+    return firstStageErr_no_err;
+}
+
+static enum firstStageErr fetchConstant(char *line, Symbol **symbols) {
     char *name, *token, *equalsSign, *strVal, tempC;
     int numberValue;
-    Symbol *tempSymbol;
     
     token = getStart(line);
     
@@ -545,8 +565,8 @@ static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
     if (isSavedKeyword(name))
         return firstStageErr_define_saved_keyword;
     
-    /* check if the name is an existing constants' names */
-    if (*constants != NULL && getSymbolByName(name, *constants, &tempSymbol))
+    /* check if the name is an existing symbols' names */
+    if (*symbols != NULL && symbolInList(*symbols, name))
         return firstStageErr_define_name_taken;
 
     /* make sure the numberValue is a number */
@@ -554,7 +574,7 @@ static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
         return firstStageErr_define_value_nan;
 
     /* register the new constant */
-    registerConstant(constants, name, numberValue);
+    registerConstant(symbols, name, numberValue);
     
     /* TODO: remove this debug log */
     tempC = *(getTokEnd(name) + 1) = '\0';
@@ -607,7 +627,7 @@ static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *s
 }
 
 /* token is the .data token */
-static enum firstStageErr fetchData(char *lblName, char *token, int *dataCounter, Symbol **symbols, int **data) {
+static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym) {
     enum firstStageErr err;
     int prevDC;
 
@@ -615,7 +635,7 @@ static enum firstStageErr fetchData(char *lblName, char *token, int *dataCounter
     if ((err = storeDataArgs(getNextToken(token), dataCounter, *symbols, data)) != firstStageErr_no_err)
         return err;
 
-    registerDataSymbol(symbols, lblName, prevDC);
+    registerDataSymbol(symbols, lblSym, prevDC);
     return firstStageErr_no_err;
 }
 
@@ -635,7 +655,7 @@ static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter
 }
 
 /* token is the .string token */ 
-static enum firstStageErr fetchString(char *lblName, char *token, int *dataCounter, Symbol **symbols, int **data) {
+static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym) {
     int prevDC;
     char *quoteStart, *quoteEnd;
     
@@ -655,13 +675,13 @@ static enum firstStageErr fetchString(char *lblName, char *token, int *dataCount
     
     prevDC = *dataCounter;
     storeStringInData(quoteStart, quoteEnd, dataCounter, data);
-    registerDataSymbol(symbols, lblName, prevDC);
+    registerDataSymbol(symbols, lblSym, prevDC);
     return firstStageErr_no_err;
 }
 
-static enum firstStageErr fetchExtern(char *lblName, char *token, Symbol *symbols) {
+static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblSym) {
     char *tokEnd, temp;
-    Symbol *tempSymb;
+    Symbol *tempSym;
     
     token = getNextToken(token);
     if (!validSymbolName(token, tokEnd = getTokEnd(token)))
@@ -673,7 +693,7 @@ static enum firstStageErr fetchExtern(char *lblName, char *token, Symbol *symbol
     temp = *(tokEnd + 1);
     *(tokEnd + 1) = '\0';
 
-    if (lblName != NULL && tokcmp(lblName, token) == 0) {
+    if (lblSym != NULL && tokcmp(lblSym->name, token) == 0) {
         *(tokEnd + 1) = temp;
         return firstStageErr_extern_def_label_same_name;
     }
@@ -683,17 +703,18 @@ static enum firstStageErr fetchExtern(char *lblName, char *token, Symbol *symbol
         return firstStageErr_extern_saved_keyword;
     }
 
-    if (getSymbolByName(token, symbols, &tempSymb)){
+    if (getSymbolByName(token, symbols, &tempSym) && tempSym->flag != SYMBOL_FLAG_EXTERN) {
         *(tokEnd + 1) = temp;
         return firstStageErr_extern_label_exists;
     }
 
     *(tokEnd + 1) = temp;
 
-    tempSymb = allocSymbol(token, tokEnd + 1);
-    tempSymb->flag = SYMBOL_FLAG_EXTERN;
+    tempSym = allocSymbol(token, tokEnd + 1);
+    tempSym->flag = SYMBOL_FLAG_EXTERN;
 
-    addSymToList(&symbols, tempSymb);
+    addSymToList(&symbols, tempSym);
+    
     logInfo("Added extern variable '%s'\n", token);
     return firstStageErr_no_err;
 }

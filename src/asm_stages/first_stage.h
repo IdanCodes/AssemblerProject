@@ -3,7 +3,7 @@
 
 /* make a seperate file to store keyword definitions */
 #define LABEL_MAX_LENGTH  31
-#define INSTRUCTION_COUNTER_OFFSET  100
+#define DATA_COUNTER_OFFSET  100
 
 #define SYMBOL_FLAG_MDEFINE 1
 #define SYMBOL_FLAG_CODE    2
