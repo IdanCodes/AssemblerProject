@@ -1,17 +1,10 @@
-; .define hi = 2
-; ENDSTR: .string "FINISHED!"
-; HELLO: mov hi, r1
+.define hi = 2
+ENDSTR: .string "FINISHED!"
+HELLO: mov hi, r1
 
-; LOOPSTART: prn #hi
-; dec r1
-; cmp r1, 0
-; bne LOOP_START
+LOOPSTART: prn #hi
+dec r1
+cmp r1, #0
+bne LOOPSTART
 
-; prn END_STR
-
-; .define meow = 4
-; MYARR: .data 2, meow, 4
-; .data 21, -12
-
-mov r1,a
-hlt a
+prn ENDSTR

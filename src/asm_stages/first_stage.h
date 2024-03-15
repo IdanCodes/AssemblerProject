@@ -22,20 +22,20 @@ enum firstStageErr {
     firstStageErr_no_err,   /* no error */
     
     /* .define errors */
-    firstStageErr_name_expected_define, /* name expected */
-    firstStageErr_unexpected_chars_define,  /* unexpected chars at the end of a define statement */
-    firstStageErr_expected_equal_sign_define,   /* expected after constant name */
-    firstStageErr_value_expected_define,    /* expected value */
-    firstStageErr_invalid_name_define,  /* the constant's name was invalid */
-    firstStageErr_saved_keyword_define, /* the constant's name is a saved keyword */
-    firstStageErr_name_taken_define,    /* name of constant taken */
-    firstStageErr_value_nan_define, /* value is not a number */
+    firstStageErr_define_name_expected, /* name expected */
+    firstStageErr_define_unexpected_chars,  /* unexpected chars at the end of a define statement */
+    firstStageErr_define_expected_equal_sign,   /* expected after constant name */
+    firstStageErr_define_value_expected,    /* expected value */
+    firstStageErr_define_invalid_name,  /* the constant's name was invalid */
+    firstStageErr_define_saved_keyword, /* the constant's name is a saved keyword */
+    firstStageErr_define_name_taken,    /* name of constant taken */
+    firstStageErr_define_value_nan, /* value is not a number */
     
     /* label errors */
-    firstStageErr_invalid_name_label,   /* invalid label name */
-    firstStageErr_const_defined_in_label,   /* constant defined in a label */
-    firstStageErr_saved_keyword_label,  /* the label's name is a saved keyword */
-    firstStageErr_name_taken_label, /* name of label taken */
+    firstStageErr_label_invalid_name,   /* invalid label name */
+    firstStageErr_label_const_definition,   /* constant defined in a label */
+    firstStageErr_label_saved_keyword,  /* the label's name is a saved keyword */
+    firstStageErr_label_name_taken, /* name of label taken */
     firstStageErr_label_empty_line, /* label defined on an empty line */
     
     /* .data errors */
@@ -56,17 +56,18 @@ enum firstStageErr {
     firstStageErr_extern_label_exists,  /* the label is already defined in the file */
     firstStageErr_extern_saved_keyword, /* extern label is a saved keyword */
     
-    /* operator errors */
-    firstStageErr_operator_not_found,   /* invalid operator name */
-    firstStageErr_operator_expected_operand,    /* expected an operand */
-    firstStageErr_operator_invalid_immediate,   /* the immediate operand was invalid */
-    firstStageErr_operator_expected_closing_sqr_bracks, /* expected closing square brackets */
-    firstStageErr_operator_expected_index,  /* index was not found between square brackets */
-    firstStageErr_operator_invalid_index,   /* the given index (in square brackets) was invalid */
-    firstStageErr_operator_invalid_label_name,  /* label name in operand has an invalid name */
-    firstStageErr_operator_invalid_addr_method, /* invalid addressing method */
-    firstStageErr_operator_invalid_operand, /* operand expected for operation */
-    firstStageErr_operator_expected_comma   /* expected comma to seperate operands */
+    /* operation errors */
+    firstStageErr_operation_not_found,  /* invalid operator name */
+    firstStageErr_operation_expected_operand,   /* expected an operand */
+    firstStageErr_operation_invalid_immediate,  /* the immediate operand was invalid */
+    firstStageErr_operation_expected_closing_sqr_bracks,    /* expected closing square brackets */
+    firstStageErr_operation_expected_index, /* index was not found between square brackets */
+    firstStageErr_operation_invalid_index,  /* the given index (in square brackets) was invalid */
+    firstStageErr_operation_invalid_label_name, /* label name in operand has an invalid name */
+    firstStageErr_operation_invalid_addr_method,    /* invalid addressing method */
+    firstStageErr_operation_invalid_operand,    /* operand expected for operation */
+    firstStageErr_operation_expected_comma, /* expected comma to seperate operands */
+    firstStageErr_operation_extra_chars /* extra characters at the end of the line */
     
 };
 

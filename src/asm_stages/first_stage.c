@@ -71,7 +71,7 @@ void assemblerFirstStage(char fileName[]) {
             /* TODO: turn this to a function */
             /* TODO: store the label in the symbols list even if the rest of the line throws an error */
             if (!validSymbolName(token, tokEnd - 1)) {
-                printFirstStageError(firstStageErr_invalid_name_label, sourceLine);
+                printFirstStageError(firstStageErr_label_invalid_name, sourceLine);
                 continue;
             }
             
@@ -85,12 +85,12 @@ void assemblerFirstStage(char fileName[]) {
             labelName[i] = '\0';
             
             if (isSavedKeyword(labelName)) {
-                printFirstStageError(firstStageErr_saved_keyword_label, sourceLine);
+                printFirstStageError(firstStageErr_label_saved_keyword, sourceLine);
                 continue;
             }
             
             if (getSymbolByName(labelName, symbols, &tempSymb)) {
-                printFirstStageError(firstStageErr_name_taken_label, sourceLine);
+                printFirstStageError(firstStageErr_label_name_taken, sourceLine);
                 continue;
             }
             
@@ -106,7 +106,7 @@ void assemblerFirstStage(char fileName[]) {
         /* constant declaration? */
         if (tokcmp(token, KEYWORD_CONST_DEC) == 0) {
             if (labelName != NULL)
-                printFirstStageError(firstStageErr_const_defined_in_label, sourceLine);
+                printFirstStageError(firstStageErr_label_const_definition, sourceLine);
             else if ((err = fetchConstant(line, &symbols)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine);
             continue;
@@ -148,7 +148,7 @@ void assemblerFirstStage(char fileName[]) {
         
         /* is this an invalid operation? */
         if (!getOperationByName(token, &operation)) {
-            printFirstStageError(firstStageErr_operator_not_found, sourceLine);
+            printFirstStageError(firstStageErr_operation_not_found, sourceLine);
             continue;
         }
         
@@ -158,7 +158,7 @@ void assemblerFirstStage(char fileName[]) {
                 continue;   /* the operation doesn't accept this operand */
             
             if (*token == '\0') {
-                printFirstStageError(firstStageErr_operator_expected_operand, sourceLine);
+                printFirstStageError(firstStageErr_operation_expected_operand, sourceLine);
                 goto nextLoop;
             }
             
@@ -170,12 +170,12 @@ void assemblerFirstStage(char fileName[]) {
                 
                 if (fetchNumber(token, tokEnd, &num, symbols) != firstStageErr_no_err) {
                     /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
-                    printFirstStageError(firstStageErr_operator_invalid_immediate, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_immediate, sourceLine);
                     goto nextLoop;
                 }
 
                 if (!validAddressingMethod(operation, operandIndex, ADDR_IMMEDIATE)) {
-                    printFirstStageError(firstStageErr_operator_invalid_addr_method, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine);
                     goto nextLoop;
                 }
                 
@@ -190,7 +190,7 @@ void assemblerFirstStage(char fileName[]) {
             *tokEnd = '\0';
             if (isRegisterName(token, &num)) {
                 if (!validAddressingMethod(operation, operandIndex, ADDR_REGISTER)) {
-                    printFirstStageError(firstStageErr_operator_invalid_addr_method, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine);
                     goto nextLoop;
                 }
                 
@@ -209,14 +209,14 @@ void assemblerFirstStage(char fileName[]) {
                 /* TODO: maybe make this a function of its own */
                 sqrBracksClose = getFirstOrEnd(sqrBracksOpen, ']');
                 if (*sqrBracksClose == '\0') {
-                    printFirstStageError(firstStageErr_operator_expected_closing_sqr_bracks, sourceLine);
+                    printFirstStageError(firstStageErr_operation_expected_closing_sqr_bracks, sourceLine);
                     goto nextLoop;
                 }
                 tokEnd = getEndOfOperand(sqrBracksClose);   /* there could be a space inside the brackets - update the token end */
                 
                 indexStart = getStart(sqrBracksOpen + 1);   /* skip the spaces between '[' and start of operand */
                 if (indexStart == sqrBracksClose) {
-                    printFirstStageError(firstStageErr_operator_expected_index, sourceLine);
+                    printFirstStageError(firstStageErr_operation_expected_index, sourceLine);
                     goto nextLoop;
                 }
                 
@@ -225,23 +225,23 @@ void assemblerFirstStage(char fileName[]) {
                     ;
                 
                 if (getTokEnd(indexStart) < indexEnd) { /* the index is not a single token */
-                    printFirstStageError(firstStageErr_operator_invalid_index, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_index, sourceLine);
                     goto nextLoop;
                 }
                 
                 if (fetchNumber(indexStart, indexEnd + 1, &num, symbols) != firstStageErr_no_err) {
                     /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
-                    printFirstStageError(firstStageErr_operator_invalid_index, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_index, sourceLine);
                     goto nextLoop;
                 }
                 
                 if (!validSymbolName(token, sqrBracksOpen)) {
-                    printFirstStageError(firstStageErr_operator_invalid_label_name, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_label_name, sourceLine);
                     goto nextLoop;
                 }
                 
                 if (!validAddressingMethod(operation, operandIndex, ADDR_CONSTANT_INDEX)) {
-                    printFirstStageError(firstStageErr_operator_invalid_addr_method, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine);
                     goto nextLoop;
                 }
                 
@@ -254,7 +254,7 @@ void assemblerFirstStage(char fileName[]) {
                 /* the operand must be a direct (label) addressing */
                 if (!validAddressingMethod(operation, operandIndex, ADDR_DIRECT)) {
                     logInfo("Operation %s does not accept direct addressing as operand %d\n", operation.opName, operandIndex);
-                    printFirstStageError(firstStageErr_operator_invalid_addr_method, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine);
                     goto nextLoop;
                 }
                 
@@ -264,18 +264,27 @@ void assemblerFirstStage(char fileName[]) {
                 goto nextOperand;
             }
             else {
-                printFirstStageError(firstStageErr_operator_invalid_operand, sourceLine);
+                printFirstStageError(firstStageErr_operation_invalid_operand, sourceLine);
                 goto nextLoop;
             }
             
             nextOperand:
             tokEnd = getStart(tokEnd);  /* skip spaces */
             if (*tokEnd != '\0' && *tokEnd != ',') {
-                printFirstStageError(firstStageErr_operator_expected_comma, sourceLine);
+                printFirstStageError(firstStageErr_operation_expected_comma, sourceLine);
                 goto nextLoop;
             }
             
-            token = getStart(tokEnd + 1);
+            if (*tokEnd != '\0')
+                token = getStart(tokEnd + 1);
+            else
+                token = tokEnd;
+        }
+        
+        /* check for extra text following the operands */
+        if (*token != '\0') {
+            printFirstStageError(firstStageErr_operation_extra_chars, sourceLine);
+            goto nextLoop;
         }
         
         nextLoop:
@@ -385,34 +394,34 @@ static enum firstStageErr fetchConstant(char *line, Symbol **constants) {
     equalsSign = getFirstOrEnd(token, '=');
     
     if (name == equalsSign) /* equals sign appeared before name */
-        return firstStageErr_name_expected_define;
+        return firstStageErr_define_name_expected;
     
     if (*equalsSign == '\0' || getNextToken(name) < equalsSign)    /* equal sign expected */
-        return firstStageErr_expected_equal_sign_define;
+        return firstStageErr_define_expected_equal_sign;
 
     /* fetch strVal + syntax validation */
     strVal = (token = getNextToken(equalsSign));
     if (*strVal == '\0')
-        return firstStageErr_value_expected_define;
+        return firstStageErr_define_value_expected;
     
     if (*getNextToken(token) != '\0')   /* extra characters */
-        return firstStageErr_unexpected_chars_define;
+        return firstStageErr_define_unexpected_chars;
 
     /* make sure the constant's name is valid */
     if (!validSymbolName(name, getTokEnd(name)))
-        return firstStageErr_invalid_name_define;
+        return firstStageErr_define_invalid_name;
 
     /* check if the name is a saved keyword */
     if (isSavedKeyword(name))
-        return firstStageErr_saved_keyword_define;
+        return firstStageErr_define_saved_keyword;
     
     /* check if the name is an existing constants' names */
     if (*constants != NULL && getSymbolByName(name, *constants, &tempSymbol))
-        return firstStageErr_name_taken_define;
+        return firstStageErr_define_name_taken;
 
     /* make sure the numberValue is a number */
     if (!tryParseToken(strVal, &numberValue))
-        return firstStageErr_value_nan_define;
+        return firstStageErr_define_value_nan;
 
     /* register the new constant */
     registerConstant(constants, name, numberValue);
