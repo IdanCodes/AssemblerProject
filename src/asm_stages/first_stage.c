@@ -18,7 +18,6 @@ static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value);
 static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbols, Symbol **pLblSymbol);
 static enum firstStageErr fetchConstant(char *line, Symbol **symbols);
 static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data);
-static enum firstStageErr fetchData(char *lblName, char *token, int *dataCounter, Symbol **symbols, int **data);
 static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
 static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter, int **data);
 static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
