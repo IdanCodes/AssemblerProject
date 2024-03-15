@@ -68,7 +68,6 @@ enum firstStageErr {
     firstStageErr_operation_invalid_operand,    /* operand expected for operation */
     firstStageErr_operation_expected_comma, /* expected comma to seperate operands */
     firstStageErr_operation_extra_chars /* extra characters at the end of the line */
-    
 };
 
 void assemblerFirstStage(char fileName[]);

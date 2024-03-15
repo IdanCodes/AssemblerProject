@@ -8,8 +8,8 @@
 #include "../utils/keywords.h"
 #include "../utils/operations.h"
 
-static void freeSymbolsList(Symbol *head);
-static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, ...); /* TODO: implement */
+static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName);
+static char *getErrMessage(enum firstStageErr err);
 static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol);
 static Symbol *allocSymbol(char *nameStart, char *nameEnd);
 static void registerConstant(Symbol **head, char *name, int value);
@@ -22,6 +22,7 @@ static enum firstStageErr fetchString(char *lblName, char *token, int *dataCount
 static enum firstStageErr fetchExtern(char *lblName, char *token, Symbol *symbols);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
 static void addSymToList(Symbol **head, Symbol *symbol);
+static void freeSymbolsList(Symbol *head);
 
 /* DOCUMENT */
 /* fileName is the file's name without the extension */
@@ -71,7 +72,7 @@ void assemblerFirstStage(char fileName[]) {
             /* TODO: turn this to a function */
             /* TODO: store the label in the symbols list even if the rest of the line throws an error */
             if (!validSymbolName(token, tokEnd - 1)) {
-                printFirstStageError(firstStageErr_label_invalid_name, sourceLine);
+                printFirstStageError(firstStageErr_label_invalid_name, sourceLine, sourceFileName);
                 continue;
             }
             
@@ -85,12 +86,12 @@ void assemblerFirstStage(char fileName[]) {
             labelName[i] = '\0';
             
             if (isSavedKeyword(labelName)) {
-                printFirstStageError(firstStageErr_label_saved_keyword, sourceLine);
+                printFirstStageError(firstStageErr_label_saved_keyword, sourceLine, sourceFileName);
                 continue;
             }
             
             if (getSymbolByName(labelName, symbols, &tempSymb)) {
-                printFirstStageError(firstStageErr_label_name_taken, sourceLine);
+                printFirstStageError(firstStageErr_label_name_taken, sourceLine, sourceFileName);
                 continue;
             }
             
@@ -98,7 +99,7 @@ void assemblerFirstStage(char fileName[]) {
             
             /* empty line */
             if (*token == '\0') {
-                printFirstStageError(firstStageErr_label_empty_line, sourceLine);
+                printFirstStageError(firstStageErr_label_empty_line, sourceLine, sourceFileName);
                 continue;
             }
         }
@@ -106,9 +107,9 @@ void assemblerFirstStage(char fileName[]) {
         /* constant declaration? */
         if (tokcmp(token, KEYWORD_CONST_DEC) == 0) {
             if (labelName != NULL)
-                printFirstStageError(firstStageErr_label_const_definition, sourceLine);
+                printFirstStageError(firstStageErr_label_const_definition, sourceLine, sourceFileName);
             else if ((err = fetchConstant(line, &symbols)) != firstStageErr_no_err)
-                printFirstStageError(err, sourceLine);
+                printFirstStageError(err, sourceLine, sourceFileName);
             continue;
         }
         
@@ -116,7 +117,7 @@ void assemblerFirstStage(char fileName[]) {
         /* .data */
         if (tokcmp(token, KEYWORD_DATA_DEC) == 0) {
             if ((err = fetchData(labelName, token, &dataCounter, &symbols, &data)) != firstStageErr_no_err)
-                printFirstStageError(err, sourceLine);
+                printFirstStageError(err, sourceLine, sourceFileName);
             else {
                 if (labelName != NULL)
                     logInfo("Added data '%s' - new data counter %d\n", labelName, dataCounter);
@@ -129,7 +130,7 @@ void assemblerFirstStage(char fileName[]) {
         /* .string */
         if (tokcmp(token, KEYWORD_STRING_DEC) == 0) {
             if ((err = fetchString(labelName, token, &dataCounter, &symbols, &data)) != firstStageErr_no_err)
-                printFirstStageError(err, sourceLine);
+                printFirstStageError(err, sourceLine, sourceFileName);
             else {
                 if (labelName != NULL)
                     logInfo("Added string '%s' - new data counter %d (line %u)\n", labelName, dataCounter, sourceLine);
@@ -142,13 +143,13 @@ void assemblerFirstStage(char fileName[]) {
         /* .extern instruction? */
         if (tokcmp(token, KEYWORD_EXTERN_DEC) == 0) {
             if ((err = fetchExtern(labelName, token, symbols)) != firstStageErr_no_err)
-                printFirstStageError(err, sourceLine);
+                printFirstStageError(err, sourceLine, sourceFileName);
             continue;
         }
         
         /* is this an invalid operation? */
         if (!getOperationByName(token, &operation)) {
-            printFirstStageError(firstStageErr_operation_not_found, sourceLine);
+            printFirstStageError(firstStageErr_operation_not_found, sourceLine, sourceFileName);
             continue;
         }
         
@@ -158,7 +159,7 @@ void assemblerFirstStage(char fileName[]) {
                 continue;   /* the operation doesn't accept this operand */
             
             if (*token == '\0') {
-                printFirstStageError(firstStageErr_operation_expected_operand, sourceLine);
+                printFirstStageError(firstStageErr_operation_expected_operand, sourceLine, sourceFileName);
                 goto nextLoop;
             }
             
@@ -170,12 +171,12 @@ void assemblerFirstStage(char fileName[]) {
                 
                 if (fetchNumber(token, tokEnd, &num, symbols) != firstStageErr_no_err) {
                     /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
-                    printFirstStageError(firstStageErr_operation_invalid_immediate, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_immediate, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
 
                 if (!validAddressingMethod(operation, operandIndex, ADDR_IMMEDIATE)) {
-                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
                 
@@ -190,7 +191,7 @@ void assemblerFirstStage(char fileName[]) {
             *tokEnd = '\0';
             if (isRegisterName(token, &num)) {
                 if (!validAddressingMethod(operation, operandIndex, ADDR_REGISTER)) {
-                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
                 
@@ -209,14 +210,14 @@ void assemblerFirstStage(char fileName[]) {
                 /* TODO: maybe make this a function of its own */
                 sqrBracksClose = getFirstOrEnd(sqrBracksOpen, ']');
                 if (*sqrBracksClose == '\0') {
-                    printFirstStageError(firstStageErr_operation_expected_closing_sqr_bracks, sourceLine);
+                    printFirstStageError(firstStageErr_operation_expected_closing_sqr_bracks, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
                 tokEnd = getEndOfOperand(sqrBracksClose);   /* there could be a space inside the brackets - update the token end */
                 
                 indexStart = getStart(sqrBracksOpen + 1);   /* skip the spaces between '[' and start of operand */
                 if (indexStart == sqrBracksClose) {
-                    printFirstStageError(firstStageErr_operation_expected_index, sourceLine);
+                    printFirstStageError(firstStageErr_operation_expected_index, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
                 
@@ -225,23 +226,23 @@ void assemblerFirstStage(char fileName[]) {
                     ;
                 
                 if (getTokEnd(indexStart) < indexEnd) { /* the index is not a single token */
-                    printFirstStageError(firstStageErr_operation_invalid_index, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_index, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
                 
                 if (fetchNumber(indexStart, indexEnd + 1, &num, symbols) != firstStageErr_no_err) {
                     /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
-                    printFirstStageError(firstStageErr_operation_invalid_index, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_index, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
                 
                 if (!validSymbolName(token, sqrBracksOpen)) {
-                    printFirstStageError(firstStageErr_operation_invalid_label_name, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_label_name, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
                 
                 if (!validAddressingMethod(operation, operandIndex, ADDR_CONSTANT_INDEX)) {
-                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
                 
@@ -254,7 +255,7 @@ void assemblerFirstStage(char fileName[]) {
                 /* the operand must be a direct (label) addressing */
                 if (!validAddressingMethod(operation, operandIndex, ADDR_DIRECT)) {
                     logInfo("Operation %s does not accept direct addressing as operand %d\n", operation.opName, operandIndex);
-                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine);
+                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine, sourceFileName);
                     goto nextLoop;
                 }
                 
@@ -264,14 +265,14 @@ void assemblerFirstStage(char fileName[]) {
                 goto nextOperand;
             }
             else {
-                printFirstStageError(firstStageErr_operation_invalid_operand, sourceLine);
+                printFirstStageError(firstStageErr_operation_invalid_operand, sourceLine, sourceFileName);
                 goto nextLoop;
             }
             
             nextOperand:
             tokEnd = getStart(tokEnd);  /* skip spaces */
             if (*tokEnd != '\0' && *tokEnd != ',') {
-                printFirstStageError(firstStageErr_operation_expected_comma, sourceLine);
+                printFirstStageError(firstStageErr_operation_expected_comma, sourceLine, sourceFileName);
                 goto nextLoop;
             }
             
@@ -283,7 +284,7 @@ void assemblerFirstStage(char fileName[]) {
         
         /* check for extra text following the operands */
         if (*token != '\0') {
-            printFirstStageError(firstStageErr_operation_extra_chars, sourceLine);
+            printFirstStageError(firstStageErr_operation_extra_chars, sourceLine, sourceFileName);
             goto nextLoop;
         }
         
@@ -303,9 +304,138 @@ void assemblerFirstStage(char fileName[]) {
     freeSymbolsList(symbols);
 }
 
-static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, ...) {
-    /* TODO: implement & print the file where the error came from */
-    printf("ERROR %d in line %u (.am)\n", err, sourceLine);
+static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName) {
+    char *message;
+    
+    if (err == firstStageErr_no_err)
+        return;
+    
+    message = getErrMessage(err);
+    logErr("file \"%s\" line %u - %s\n", fileName, sourceLine, message);
+}
+
+static char *getErrMessage(enum firstStageErr err) {
+    switch (err) {
+        /* -- .define -- */
+        case firstStageErr_define_name_expected:
+            return "constant name expected";
+            
+        case firstStageErr_define_unexpected_chars:
+            return "unexpected characters at end of line";
+            
+        case firstStageErr_define_expected_equal_sign:
+            return "equal sign expeceted";
+            
+        case firstStageErr_define_value_expected:
+            return "constant value expected";
+            
+        case firstStageErr_define_invalid_name:
+            return "invalid name for a constant";
+            
+        case firstStageErr_define_saved_keyword:
+            return "can't use a saved keyword as a constant's name";
+            
+        case firstStageErr_define_name_taken:
+            return "the constant's name is already used";
+            
+        case firstStageErr_define_value_nan:
+            return "value is not a number";
+        
+            
+        /* -- label -- */
+        case firstStageErr_label_invalid_name:
+            return "invalid name for a label";
+            
+        case firstStageErr_label_const_definition:
+            return "can't define a constant in the same line as a label";
+            
+        case firstStageErr_label_saved_keyword:
+            return "can't use a saved keyword as a label's name";
+            
+        case firstStageErr_label_name_taken:
+            return "a label with this name already exists";
+            
+        case firstStageErr_label_empty_line:
+            return "can't define a label on an empty line";
+            
+            
+        /* -- .data -- */
+        case firstStageErr_data_nan:
+            return "arguments of a data instruction must be immediate numbers or constants";
+            
+        case firstStageErr_data_comma_expected:
+            return "comma expected between arguments";
+            
+        case firstStageErr_data_const_not_found:
+            return "constant was not found";
+            
+        case firstStageErr_data_argument_expected:
+            return "argument expected";
+            
+            
+        /* -- .string -- */
+        case firstStageErr_string_expected_quotes:
+            return "expected '\"' to start the string";
+        case firstStageErr_string_expected_end_quotes:
+            return "expected '\"' to terminate the string";
+        case firstStageErr_string_extra_chars:
+            return "extra characters after closing '\"'";
+            
+            
+        /* -- .extern -- */
+        case firstStageErr_extern_invalid_lbl_name:
+            return "invalid label name for extern label";
+            
+        case firstStageErr_extern_extra_chars:
+            return "extra characters following label";
+            
+        case firstStageErr_extern_def_label_same_name:
+            ;   /* fall through */
+        case firstStageErr_extern_label_exists:
+            return "a label with this name already exists in this file";
+            
+        case firstStageErr_extern_saved_keyword:
+            return "can't used .extern on a saved keyword";
+            
+            
+        /* -- operations -- */
+        case firstStageErr_operation_not_found:
+            return "invalid operation";
+            
+        case firstStageErr_operation_expected_operand:
+            return "operand expected";
+            
+        case firstStageErr_operation_invalid_immediate:
+            return "immediate operand must be a number or constant";
+            
+        case firstStageErr_operation_expected_closing_sqr_bracks:
+            return "expected closing square brackets";
+            
+        case firstStageErr_operation_expected_index:
+            return "index expected inside square brackets";
+            
+        case firstStageErr_operation_invalid_index:
+            return "index must be a number or constant";
+            
+        case firstStageErr_operation_invalid_label_name:
+            return "operand has an invalid label name";
+        
+        case firstStageErr_operation_invalid_addr_method:
+            return "addressing method does not match operation";
+        
+        case firstStageErr_operation_invalid_operand:
+            return "illegal operand";
+        
+        case firstStageErr_operation_expected_comma:
+            return "comma expected to seperate operands";
+        
+        case firstStageErr_operation_extra_chars:
+            return "extra characters at end of line";
+            
+            
+        default:
+            return "UNDEFINED ERROR";
+    }
 }
 
 /**
