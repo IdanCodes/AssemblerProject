@@ -10,6 +10,7 @@
 #define SYMBOL_FLAG_EXTERN  4
 #define SYMBOL_FLAG_DATA    8
 
+/* when accessing by index, check if the range of the index is bad out of bounds */
 typedef struct Symbol {
     char *name;
     int value;
@@ -56,10 +57,20 @@ enum firstStageErr {
     firstStageErr_extern_saved_keyword, /* extern label is a saved keyword */
     
     /* operator errors */
-    firstStageErr_operator_not_found    /* invalid operator name */
+    firstStageErr_operator_not_found,   /* invalid operator name */
+    firstStageErr_operator_expected_operand,    /* expected an operand */
+    firstStageErr_operator_invalid_immediate,   /* the immediate operand was invalid */
+    firstStageErr_operator_expected_closing_sqr_bracks, /* expected closing square brackets */
+    firstStageErr_operator_expected_index,  /* index was not found between square brackets */
+    firstStageErr_operator_invalid_index,   /* the given index (in square brackets) was invalid */
+    firstStageErr_operator_invalid_label_name,  /* label name in operand has an invalid name */
+    firstStageErr_operator_invalid_addr_method, /* invalid addressing method */
+    firstStageErr_operator_invalid_operand, /* operand expected for operation */
+    firstStageErr_operator_expected_comma   /* expected comma to seperate operands */
+    
 };
 
 void assemblerFirstStage(char fileName[]);
-int validSymbolName(char *tok, char *end);
+int validSymbolName(char *start, char *end);
 
 #endif /* FIRST_STAGE */

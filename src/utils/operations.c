@@ -2,6 +2,9 @@
 #include "strutils.h"
 #include "keywords.h"
 
+
+
+/* DOCUMENT functions in this file */
 static Operation operations[NUM_OPERATIONS] = {
     {
         MOV_OPCODE,
@@ -127,4 +130,41 @@ int getOperationByName(char *name, Operation *op) {
     }
     
     return 0;
+}
+
+int getOperandCount(Operation op) {
+    return operationHasOperand(op, SOURCE_OPERAND_INDEX) + operationHasOperand(op, DEST_OPERAND_INDEX);
+}
+
+/**
+ * Check if an operation accepts an addressing method for an operand.
+ * @param op the operation to check
+ * @param addressingMethod the addressing method to check
+ * @return whether the operation accepts the addressing method
+ */
+int validAddressingMethod(Operation op, int operandIndex, int addrMethod) {
+    if (addrMethod < 0 || addrMethod >= NUM_ADDR_METHODS)
+        return 0;
+        
+    return operandIndex == SOURCE_OPERAND_INDEX
+            ? op.sourceAddrMethod[addrMethod]
+            : operandIndex == DEST_OPERAND_INDEX
+                ? op.destAddrMethod[addrMethod]
+                : 0;
+}
+
+/**
+ * Does the operation accept an operand at the given operand index?
+ * @param op the given operation
+ * @param operandIndex the operand index to check
+ * @return whether the operation accepts the given operand index
+ */
+int operationHasOperand(Operation op, int operandIndex) {
+    return operandIndex == SOURCE_OPERAND_INDEX
+            ? (op.sourceAddrMethod[ADDR_IMMEDIATE] || op.sourceAddrMethod[ADDR_DIRECT]
+               || op.sourceAddrMethod[ADDR_CONSTANT_INDEX] || op.sourceAddrMethod[ADDR_REGISTER])
+            : operandIndex == DEST_OPERAND_INDEX
+                ? (op.destAddrMethod[ADDR_IMMEDIATE] || op.destAddrMethod[ADDR_DIRECT]
+                   || op.destAddrMethod[ADDR_CONSTANT_INDEX] || op.sourceAddrMethod[ADDR_REGISTER])
+                : 0;    /* invalid operand index */
 }

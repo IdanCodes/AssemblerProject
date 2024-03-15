@@ -1,7 +1,6 @@
 #include <math.h>
 #include "strutils.h"
 #include "charutils.h"
-#include "logger.h"
 
 /**
  * Get the first non-space character of a string
@@ -153,4 +152,50 @@ int tryParseToken(char *str, int *number) {
 
     *number = result * sign;
     return 1;
+}
+
+/**
+ * Get the end of the operand - address of the first space (isspace), termination ('\0') or comma (',')
+ * @param str the given string to search in
+ * @return address of the desired character in the string
+ */
+char *getEndOfOperand(char *str) {
+    if (*str == '\0' || isspace(*str) || *str == ',')
+        return str;
+    
+    for (str++; *str != '\0' && !isspace(*str) && *str != ','; str++)
+        ;   /* wait until the operand ends */
+    
+    return str;
+}
+
+/**
+ * Check if the given char pointer is inside the token
+ * @param tok the token to search inside (the start of it)
+ * @param pc the address to search for
+ * @return 1 if the given char pointer is inside the token, 0 otherwise.
+ */
+int isInTok(char *tok, char *pc) {
+    return tok <= pc && getTokEnd(tok) >= pc;
+}
+
+/**
+ * Check how many times a character appears in a token
+ * @param token the token to search in
+ * @param c the character to look for
+ * @return the amount of times c appears in token 
+ */
+int countInToken(char *token, char c) {
+    int cnt;
+    char *end;
+    
+    if (token == (end = getTokEnd(token)))
+        return 0;
+    
+    for (cnt = 0; token <= end; token++) {
+        if (*token == c)
+            cnt++;
+    }
+    
+    return cnt;
 }
