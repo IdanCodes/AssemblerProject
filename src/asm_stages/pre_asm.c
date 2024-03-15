@@ -152,11 +152,11 @@ MACRO *allocMcr(char *name) {
     
     result = (MACRO *)malloc(sizeof(MACRO));
     if (result == NULL)
-        terminalError(1, "Insufficient memory");
+        logInsuffMemErr("allocating macro");
     
     result->name = strdup(name);
     if (result->name == NULL)
-        terminalError(1, "Insufficient memory");
+        logInsuffMemErr("allocating macro's name");
     
     result->next = NULL;
     

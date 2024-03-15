@@ -17,5 +17,6 @@ void logInfo(char *fmt, ...);
 void logWarn(char *fmt, ...);
 void logErr(char *fmt, ...);
 void terminalError(int exitCode, char *fmt, ...);
+void logInsuffMemErr(char *details);
 
 #endif /* LOGGER */

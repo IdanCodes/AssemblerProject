@@ -53,7 +53,7 @@ void assemblerFirstStage(char fileName[]) {
     dataCounter = 0;
     data = (int *)malloc(sizeof(int));
     if (data == NULL)
-        terminalError(1, "Insufficient memory\n");
+        logInsuffMemErr("allocating data for first stage");
     
     sourceLine = 0;
     labelSymbol = NULL;
@@ -465,14 +465,14 @@ static Symbol *allocSymbol(char *nameStart, char *nameEnd) {
 
     newS = (Symbol *)malloc(sizeof(Symbol));
     if (newS == NULL)
-        terminalError(1, "Insufficient memory\n");
+        logInsuffMemErr("allocating symbol");
 
     temp = *nameEnd;
     *nameEnd = '\0';
 
     newS->name = strdup(nameStart);
     if (newS->name == NULL)
-        terminalError(1, "Insufficient memory\n");
+        logInsuffMemErr("allocating symbol's name");
 
     *nameEnd = temp;
     return newS;
@@ -507,14 +507,14 @@ static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbol
         return firstStageErr_label_invalid_name;
 
     /* save label name */
-    labelName = (char *)malloc(sizeof(char [LABEL_MAX_LENGTH]));
+    labelName = (char *)malloc(sizeof(char) * (tokEnd - (*token)));
     if (labelName == NULL)
-        terminalError(1, "Insufficient memory\n");
+        logInsuffMemErr("allocating label");
 
     for (i = 0; i < tokEnd - (*token); i++)
         (labelName)[i] = (*token)[i];
     (labelName)[i] = '\0';
-
+    
     *pLblSymbol = allocSymbol(labelName, getTokEnd(labelName) + 1);
 
     if (isSavedKeyword(labelName))
@@ -616,7 +616,7 @@ static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *s
         /* store the number into memory and increment data counter */
         *data = (int *)realloc(*data, sizeof(int) * (*dataCounter));
         if (*data == NULL)
-            terminalError(1, "Insufficient memory\n");
+            logInsuffMemErr("reallocating data for numbers in first stage");
         
         (*data)[*dataCounter] = num;
         (*dataCounter)++;
@@ -645,7 +645,7 @@ static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter
     *dataCounter += (len = (int)(quoteEnd - quoteStart));
     *data = realloc(*data, sizeof(int *) * *dataCounter);
     if (*data == NULL)
-        terminalError(1, "Insufficient memory\n");
+        logInsuffMemErr("reallocating data for string in first stage");
 
     for (i = 1; i < len; i++)
         (*data)[prevDC + i - 1] = (int)quoteStart[i];

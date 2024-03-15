@@ -76,3 +76,7 @@ void terminalError(int exitCode, char *fmt, ...) {
     exit(exitCode);
 }
 
+void logInsuffMemErr(char *details) {
+    const int exitCode = 1;
+    terminalError(exitCode, "Insufficient memory (%s)\n", details);
+}
