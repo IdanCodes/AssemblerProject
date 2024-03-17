@@ -11,7 +11,7 @@ FILES = $(shell find $(SRC_DIR) -name "*.c") main.c
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(FILES))
 
 prog: $(OBJ_FILES)
-	$(CC) $(FLAGS) $^ -o $@
+	$(CC) $(FLAGS) $^ -o $@ -lm
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(shell dirname "$@")

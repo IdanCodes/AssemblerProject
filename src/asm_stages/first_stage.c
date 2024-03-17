@@ -32,9 +32,9 @@ void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     int dataCounter, instructionCounter;
-    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *token, *tokEnd, *sqrBracksOpen, *indexStart, *indexEnd, *sqrBracksClose, temp;
+    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *token, *tokEnd, *sqrBracksOpen, *indexStart, *indexEnd, *sqrBracksClose, temp, operandIndex;
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len, *data, num, operandIndex;
+    int len, *data, num;
     FILE *sourcef;
     Symbol *symbols, *labelSymbol;
     Operation operation;
@@ -187,7 +187,6 @@ void assemblerFirstStage(char fileName[]) {
             *tokEnd = temp;
             
             /* constant indexing addressing? */
-            /* TODO: Make the square brackets constants */
             sqrBracksOpen = getFirstOrEnd(token, OPERAND_INDEX_START_CHAR);
             if (sqrBracksOpen < tokEnd) {  /* '[' character must appear next to the array's name (no spaces) */
                 /* TODO: maybe make this a function of its own */

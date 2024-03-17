@@ -39,7 +39,7 @@ typedef struct {
 
 int getOperationByName(char *name, Operation *op);
 int getOperandCount(Operation op);
-int validAddressingMethod(Operation op, int operandIndex, int addrMethod);
-int operationHasOperand(Operation op, int operandIndex);
+int validAddressingMethod(Operation op, char operandIndex, char addrMethod);
+int operationHasOperand(Operation op, char operandIndex);
 
 #endif /* OPERATIONS */
