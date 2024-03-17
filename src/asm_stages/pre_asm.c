@@ -17,7 +17,7 @@ enum preAssembleErr preAssemble(char fileName[]) {
     char line[MAXLINE + 1]; /* account for '\0' */
     char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token;
     FILE *sourcef, *outf;
-    MACRO *head, *tail, *mcr;
+    Macro *head, *tail, *mcr;
     enum preAssembleErr preAsmErr;
     
     /* -- open source and output files -- */
@@ -109,8 +109,8 @@ enum preAssembleErr preAssemble(char fileName[]) {
         head = head->next;
     }
 
-    if (preAsmErr != preAssembleErr_no_err) {   /* TODO: use logerror instead */
-        printf("%s (line %u in file '%s').\n", preAsmErrMessage(preAsmErr), sourceLine, sourceFileName);
+    if (preAsmErr != preAssembleErr_no_err) {
+        logErr("%s (line %u in file '%s').\n", preAsmErrMessage(preAsmErr), sourceLine, sourceFileName);
         deleteFile(outFileName);
     }
     
@@ -143,14 +143,14 @@ char *preAsmErrMessage(enum preAssembleErr err) {
 }
 
 /**
- * Allocate a MACRO
+ * Allocate a Macro
  * @param name the name of the macro
  * @return the address of the allocated macro
  */
-MACRO *allocMcr(char *name) {
-    MACRO *result;
+Macro *allocMcr(char *name) {
+    Macro *result;
     
-    result = (MACRO *)malloc(sizeof(MACRO));
+    result = (Macro *)malloc(sizeof(Macro));
     if (result == NULL)
         logInsuffMemErr("allocating macro");
     
@@ -164,10 +164,10 @@ MACRO *allocMcr(char *name) {
 }
 
 /**
- * Free (deallocate) an allocated MACRO
+ * Free (deallocate) an allocated Macro
  * @param mcr the macro to free
  */
-void freeMcr(MACRO *mcr) {
+void freeMcr(Macro *mcr) {
     free(mcr->name);
     free(mcr);
 }
@@ -178,7 +178,7 @@ void freeMcr(MACRO *mcr) {
  * @param head the head of the list to search in
  * @return if the macro was found, returns its address. otherwise returns NULL.
  */
-MACRO *getMacroWithName(char *name, MACRO *head) {
+Macro *getMacroWithName(char *name, Macro *head) {
     while (head != NULL) {
         if (tokcmp(name, head->name) == 0)
             return head;
@@ -193,7 +193,7 @@ MACRO *getMacroWithName(char *name, MACRO *head) {
  * @param sourcef the file to expand from
  * @param destf the file to expand to
  */
-void expandMacro(MACRO *mcr, FILE *destf, char *sourcefileName) {
+void expandMacro(Macro *mcr, FILE *destf, char *sourcefileName) {
     unsigned int sourceLine, skippedLines;
     int len;
     char line[MAXLINE + 1];
