@@ -147,10 +147,9 @@ void assemblerFirstStage(char fileName[]) {
                 goto nextLoop;
             }
             
-            /* TODO: use #define to make '#' a constant in char utils or something */
             /* immediate addressing? */
             tokEnd = getEndOfOperand(token);
-            if (*token == '#') {
+            if (*token == IMMEDIATE_OPERAND_PREFIX_CHAR) {
                 token++;
                 
                 if (fetchNumber(token, tokEnd, &num, symbols) != firstStageErr_no_err) {
@@ -189,10 +188,10 @@ void assemblerFirstStage(char fileName[]) {
             
             /* constant indexing addressing? */
             /* TODO: Make the square brackets constants */
-            sqrBracksOpen = getFirstOrEnd(token, '[');
+            sqrBracksOpen = getFirstOrEnd(token, OPERAND_INDEX_START_CHAR);
             if (sqrBracksOpen < tokEnd) {  /* '[' character must appear next to the array's name (no spaces) */
                 /* TODO: maybe make this a function of its own */
-                sqrBracksClose = getFirstOrEnd(sqrBracksOpen, ']');
+                sqrBracksClose = getFirstOrEnd(sqrBracksOpen, OPERAND_INDEX_END_CHAR);
                 if (*sqrBracksClose == '\0') {
                     printFirstStageError(firstStageErr_operation_expected_closing_sqr_bracks, sourceLine, sourceFileName);
                     goto nextLoop;
@@ -673,8 +672,6 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     /* check for more chars in the same token and in the rest of the string */
     if (quoteEnd != getTokEnd(quoteEnd) || *getNextToken(quoteEnd) != '\0')
         return firstStageErr_string_extra_chars;
-    
-    /* TODO: check if a string can be empty */
     
     prevDC = *dataCounter;
     storeStringInData(quoteStart, quoteEnd, dataCounter, data);
