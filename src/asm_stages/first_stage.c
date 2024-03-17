@@ -662,8 +662,12 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     if (*quoteStart == '\0' || (token = getNextToken(token)) < quoteStart)
         return firstStageErr_string_expected_quotes;
 
-    quoteEnd = getFirstOrEnd(token + 1, '"');
-    if (*quoteEnd == '\0')
+    for (quoteEnd = quoteStart + 1; *quoteEnd != '\0'; quoteEnd++)
+        ;   /* find the end of the string */
+    for (; *quoteEnd != '"' && quoteEnd > quoteStart; quoteEnd--)
+        ;   /* find the last '"' of the string */
+        
+    if (quoteEnd == quoteStart)
         return firstStageErr_string_expected_end_quotes;
     
     /* check for more chars in the same token and in the rest of the string */
