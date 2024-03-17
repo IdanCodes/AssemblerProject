@@ -8,6 +8,10 @@
 #define MAX_NUMBER  (8191)  /* (2^(NUM_BITS - 1) - 1) */
 
 #define NUM_ARE_BITS    (2) /* number of A,R,E bits */
+#define NUM_SOURCE_BITS (2) /* number of bits for the source addressing method */
+#define NUM_DEST_BITS   (2) /* number of bits for the destination addressing method */
+#define NUM_OPCODE_BITS (2) /* number of bits for the opcode */
+
 
 #define BINARY_SYS_BASE (2) /* base of the binary system */
 
@@ -16,6 +20,6 @@ typedef struct {
 } Byte;
 
 int numberToByte(int number, Byte *pbyte);
-void getFirstWordBin(Operation op, char sourceAddr, char destAddr, Byte *pbyte);
+int getFirstWordBin(char opcode, char sourceAddr, char destAddr, Byte *pbyte);
 
 #endif  /* BINARYUTILS */

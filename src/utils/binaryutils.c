@@ -9,32 +9,10 @@ static void flipByte(Byte *pbyte);
  * - assuming pbyte isn't NULL */
 int numberToByte(int number, Byte *pbyte) {
     const int firstBitValue = 1;    /* value of LSB (least significant bit) */
-    int bitValue, bitIndex, temp, i;
-    int sign;
+    int bitValue, bitIndex, sign, temp, i;
     
     if (number < MIN_NUMBER || number > MAX_NUMBER)
         return 0;
-    
-    
-    /*
-     * 0 0 0 = 0
-     * 0 0 1 = 1
-     * 0 1 0 = 2
-     * 0 1 1 = 3
-     * 1 0 0 = -4
-     * 1 0 1 = -3
-     * 1 1 0 = -2
-     * 1 1 1 = -1
-     * 
-     * -4 -> 4 * sign
-     * 4 - 2 = 2 -> [1 0]
-     * 2 - 1 = 1 -> [1 1]
-     * * sign = [ 1 0 0 ]
-     * 
-     * 2 -> 2 * sign
-     * 2 - 2 = 0 -> [1, 0]
-     * * sign = [ 0 1 0 ]
-     */
     
     sign = number < 0 ? -1 : 1;
     if (sign < 0)
@@ -69,25 +47,39 @@ int numberToByte(int number, Byte *pbyte) {
 }
 
 /* get a binary representation of an operation's first word
- * - assuming pbyte isn't NULL */
-void getFirstWordBin(Operation op, char sourceAddr, char destAddr, Byte *pbyte) {
-    int bitIndex;
-    const char addressingMethods[][2] = { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } };
+ * - assuming pbyte isn't NULL
+ * - returns whether the conversion was successful */
+int getFirstWordBin(char opcode, char sourceAddr, char destAddr, Byte *pbyte) {
+    int start, bitIndex;
+    Byte tempByte;
     
     /* in the first word of an instruction, the A,R,E bits are 0 */
     for (bitIndex = 0; bitIndex < NUM_ARE_BITS; bitIndex++)
         pbyte->bits[bitIndex] = 0;
     
     /* destination addressing */
-    pbyte->bits[bitIndex++] = addressingMethods[destAddr][0];
-    pbyte->bits[bitIndex++] = addressingMethods[destAddr][1];
+    if (!numberToByte(destAddr, &tempByte))
+        return 0;
+    for (start = bitIndex; (bitIndex - start) < NUM_DEST_BITS; bitIndex++)
+        pbyte->bits[bitIndex] = tempByte.bits[bitIndex - start];
+    
     
     /* source addressing */
-    pbyte->bits[bitIndex++] = addressingMethods[sourceAddr][0];
-    pbyte->bits[bitIndex++] = addressingMethods[sourceAddr][1];
+    if (!numberToByte(sourceAddr, &tempByte))
+        return 0;
+    for (start = bitIndex; (bitIndex - start) < NUM_SOURCE_BITS; bitIndex++)
+        pbyte->bits[bitIndex] = tempByte.bits[bitIndex - start];
     
     /* opcode */
+    if (!numberToByte(opcode, &tempByte))
+        return 0;
+    for (start = bitIndex; (bitIndex - start) < NUM_OPCODE_BITS; bitIndex++)
+        pbyte->bits[bitIndex] = tempByte.bits[bitIndex - start];
     
+    for (; bitIndex < NUM_BITS; bitIndex++)
+        pbyte->bits[bitIndex] = 0;
+    
+    return 1;
 }
 
 /* flips a bit */

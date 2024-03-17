@@ -10,22 +10,18 @@ int main(void) {
     /*if (preAssemble(FILENAME) != preAssembleErr_no_err)
         return 1;
 
-    assemblerFirstStage(FILENAME); *//* TODO: check if there was an error after the first stage */
+    assemblerFirstStage(FILENAME);  *//* TODO: check if there was an error after the first stage */
     
+    int i;
+    char opcode = 9, srcAddr = 3, destAddr = 2;
     Byte b;
-    int i, min = -10, max = 10, number;
     
-    for (number = min; number <= max; number++) {
-        if (!numberToByte(number, &b)) {
-            printf("Could not convert %d.\n", number);
-            return 0;
-        }
-
-        printf("%d\t=\t[", number);
-        for (i = NUM_BITS-1; i >= 0; i--) {
-            printf(" %d", b.bits[i]);
-        }
-        printf(" ]\n");
+    if (!getFirstWordBin(opcode, srcAddr, destAddr, &b)) {
+        printf("Couldn't convert to binary.\n");
+    }
+    
+    for (i = NUM_BITS-1; i >= 0; i--) {
+        printf(" %d", b.bits[i]);
     }
     
     return 0;
