@@ -7,6 +7,7 @@
 #include "../utils/logger.h"
 #include "../utils/keywords.h"
 #include "../utils/operations.h"
+#include "../utils/binaryutils.h"
 
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName);
 static char *getErrMessage(enum firstStageErr err);
@@ -32,32 +33,34 @@ void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     int dataCounter, instructionCounter;
-    char sourceFileName[FILENAME_MAX]/*, outFileName[FILENAME_MAX]*/, *token, *tokEnd, *sqrBracksOpen, *indexStart, *indexEnd, *sqrBracksClose, temp, operandIndex;
+    char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token, *tokEnd, *sqrBracksOpen, *indexStart, *indexEnd, *sqrBracksClose, temp, operandIndex, operandAddrs[NUM_OPERANDS], wordIndex;
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len, *data, num;
+    int len, *data, num, oprndCnt;
     FILE *sourcef;
     Symbol *symbols, *labelSymbol;
     Operation operation;
+    Byte firstWord, words[3];
     enum firstStageErr err;
     
     
     /* -- open files -- */
     sprintf(sourceFileName, "%s.%s", fileName, PRE_ASSEMBLED_FILE_EXTENSION);
-    /* TODO: out file? sprintf(outFileName, "%s.%s", fileName, OBJECT_FILE_EXTENSION); */
+    sprintf(outFileName, "%s.%s", fileName, OBJECT_FILE_EXTENSION); 
     
     openFile(sourceFileName, "r", &sourcef);
     
     
     /* -- main loop -- */
-    instructionCounter = 0;
-    dataCounter = 0;
     data = (int *)malloc(sizeof(int));
     if (data == NULL)
         logInsuffMemErr("allocating data for first stage");
     
+    instructionCounter = 0;
+    dataCounter = 0;
     sourceLine = 0;
     labelSymbol = NULL;
     symbols = NULL;
+    err = firstStageErr_no_err;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine += skippedLines;
         /* if the previous symbol wasn't used, free it */
@@ -138,9 +141,13 @@ void assemblerFirstStage(char fileName[]) {
         }
         
         /* fetch operands */
+        oprndCnt = 0;
+        wordIndex = 0;
         for (operandIndex = 0, token = getNextToken(token); operandIndex < NUM_OPERANDS; operandIndex++) {
+            operandAddrs[operandIndex] = 0;
             if (!operationHasOperand(operation, operandIndex))
                 continue;   /* the operation doesn't accept this operand */
+            oprndCnt++;
             
             if (*token == '\0') {
                 printFirstStageError(firstStageErr_operation_expected_operand, sourceLine, sourceFileName);
@@ -164,8 +171,10 @@ void assemblerFirstStage(char fileName[]) {
                 }
                 
                 /* TODO: here the operand's addressing is immediate */
+                operandAddrs[operandIndex] = ADDR_IMMEDIATE;
                 logInfo("%s - operand %d = immediate\n", operation.opName, operandIndex);
-                
+                /* TODO: REMEMBER TO CHECK IF WRITE IMMEDIATE RETURNED AN ERROR (NUMBER OUT OF RANGE) */
+                writeImmediateToByte(&words[wordIndex++], num);
                 goto nextOperand;
             }
             
@@ -180,6 +189,7 @@ void assemblerFirstStage(char fileName[]) {
                 
                 /* TODO: here the operand's addressing is register method */
                 logInfo("%s - operand %d = register\n", operation.opName, operandIndex);
+                operandAddrs[operandIndex] = ADDR_REGISTER;
                 
                 *tokEnd = temp;
                 goto nextOperand;
@@ -230,6 +240,7 @@ void assemblerFirstStage(char fileName[]) {
                 
                 /* TODO: here the operand's addressing is a constant index method */
                 logInfo("%s - operand %d = constant index\n", operation.opName, operandIndex);
+                operandAddrs[operandIndex] = ADDR_CONSTANT_INDEX;
                 
                 goto nextOperand;
             }
@@ -243,6 +254,7 @@ void assemblerFirstStage(char fileName[]) {
                 
                 /* TODO: here the operand's addressing is a direct (label) addressing */
                 logInfo("%s - operand %d = direct\n", operation.opName, operandIndex);
+                operandAddrs[operandIndex] = ADDR_DIRECT;
                 
                 goto nextOperand;
             }
@@ -269,6 +281,16 @@ void assemblerFirstStage(char fileName[]) {
             printFirstStageError(firstStageErr_operation_extra_chars, sourceLine, sourceFileName);
             goto nextLoop;
         }
+
+        getFirstWordBin(operation.opCode, operandAddrs[SOURCE_OPERAND_INDEX], operandAddrs[DEST_OPERAND_INDEX], &firstWord);
+        
+        for (; wordIndex < 3; wordIndex++)
+            clearByte(&words[wordIndex]);
+        
+        logInfo("LINE %u:\n", sourceLine);
+        printByte(firstWord);
+        for (wordIndex = 0; wordIndex < 3; wordIndex++)
+            printByte(words[wordIndex]);
         
         nextLoop:
         continue;

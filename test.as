@@ -1,6 +1,6 @@
-.define hi = 2
+.define hi = 100
 ENDSTR: .string "FINISHED!"
-HELLO: mov hi, r1
+HELLO: mov #hi, r1
 
 HI: .extern meow 
 

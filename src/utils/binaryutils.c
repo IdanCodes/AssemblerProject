@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <math.h>
 #include "binaryutils.h"
 
@@ -80,6 +81,44 @@ int getFirstWordBin(char opcode, char sourceAddr, char destAddr, Byte *pbyte) {
         pbyte->bits[bitIndex] = 0;
     
     return 1;
+}
+
+void clearByte(Byte *pbyte) {
+    int i;
+    
+    for (i = 0; i < NUM_BITS; i++)
+        pbyte->bits[i] = 0;
+}
+
+/* returns whether the writing was successful (pretty much whether the number was in range) */
+int writeImmediateToByte(Byte *pbyte, int number) {
+    int i;
+    int j;
+    Byte tempByte;
+    
+    if (number < MIN_IMMEDIATE || number > MAX_IMMEDIATE)
+        return 0;
+    
+    clearByte(pbyte);
+    
+    /* A,R,E bits are 0 */
+    i = NUM_ARE_BITS;
+    numberToByte(number, &tempByte);
+    
+    /* copy the bits */
+    for (j = 0; i < NUM_BITS; i++, j++)
+        pbyte->bits[i] = tempByte.bits[j];
+    
+    return 1;
+}
+
+/* TODO: THIS IS FOR TESTING ONLY (maybe make this print to a file in fileutils.c or something) */
+void printByte(Byte byte) {
+    int i;
+    
+    for (i = NUM_BITS - 1; i >= 0; i--)
+        printf(" %d", byte.bits[i]);
+    printf("\n");
 }
 
 /* flips a bit */
