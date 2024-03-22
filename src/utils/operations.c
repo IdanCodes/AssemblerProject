@@ -143,14 +143,14 @@ int getOperandCount(Operation op) {
  * @param addressingMethod the addressing method to check
  * @return whether the operation accepts the addressing method
  */
-int validAddressingMethod(Operation op, char operandIndex, char addrMethod) {
+int validAddressingMethod(Operation op, int operandIndex, int addrMethod) {
     if (addrMethod < 0 || addrMethod >= NUM_ADDR_METHODS)
         return 0;
         
     return operandIndex == SOURCE_OPERAND_INDEX
-            ? op.sourceAddrMethod[(int)addrMethod]
+            ? op.sourceAddrMethod[addrMethod]
             : operandIndex == DEST_OPERAND_INDEX
-                ? op.destAddrMethod[(int)addrMethod]
+                ? op.destAddrMethod[addrMethod]
                 : 0;
 }
 
@@ -160,7 +160,7 @@ int validAddressingMethod(Operation op, char operandIndex, char addrMethod) {
  * @param operandIndex the operand index to check
  * @return whether the operation accepts the given operand index
  */
-int operationHasOperand(Operation op, char operandIndex) {
+int operationHasOperand(Operation op, int operandIndex) {
     return operandIndex == SOURCE_OPERAND_INDEX
             ? (op.sourceAddrMethod[ADDR_IMMEDIATE] || op.sourceAddrMethod[ADDR_DIRECT]
                || op.sourceAddrMethod[ADDR_CONSTANT_INDEX] || op.sourceAddrMethod[ADDR_REGISTER])

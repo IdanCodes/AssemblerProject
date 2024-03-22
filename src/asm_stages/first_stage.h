@@ -67,7 +67,9 @@ enum firstStageErr {
     firstStageErr_operation_invalid_addr_method,    /* invalid addressing method */
     firstStageErr_operation_invalid_operand,    /* operand expected for operation */
     firstStageErr_operation_expected_comma, /* expected comma to seperate operands */
-    firstStageErr_operation_extra_chars /* extra characters at the end of the line */
+    firstStageErr_operation_extra_chars,    /* extra characters at the end of the line */
+    firstStageErr_operation_immediate_oor,  /* immediate operand was out of range */
+    firstStageErr_operation_index_oor   /* constant index was out of range */
 };
 
 void assemblerFirstStage(char fileName[]);

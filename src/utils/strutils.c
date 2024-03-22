@@ -135,8 +135,10 @@ int tryParseToken(char *str, int *number) {
     while (*str == '0')
         str++;
 
-    if (str == end && zeroPrefix && sign > 0) /* don't accept "-0" */
+    if (str == end && zeroPrefix && sign > 0) /* don't accept "-0" */ {
+        *number = 0;
         return 1;   /* just a string full of zeroes */
+    }
 
     if (str == end && !zeroPrefix)  /* if we've reached the end of the token (and there were no prefixing zeros) */
         return 0;   /* not a number */

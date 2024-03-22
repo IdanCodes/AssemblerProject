@@ -33,13 +33,13 @@ void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     int dataCounter, instructionCounter;
-    char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token, *tokEnd, *sqrBracksOpen, *indexStart, *indexEnd, *sqrBracksClose, temp, operandIndex, operandAddrs[NUM_OPERANDS], wordIndex;
+    char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token, *tokEnd, *sqrBracksOpen, *indexStart, *indexEnd, *sqrBracksClose, temp, operandAddrs[NUM_OPERANDS];
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len, *data, num, oprndCnt;
+    int len, *data, num, oprndCnt, operandIndex, wordIndex, i;
     FILE *sourcef;
     Symbol *symbols, *labelSymbol;
     Operation operation;
-    Byte firstWord, words[3];
+    Byte firstWord, words[NUM_MAX_EXTRA_WORDS];
     enum firstStageErr err;
     
     
@@ -173,8 +173,11 @@ void assemblerFirstStage(char fileName[]) {
                 /* TODO: here the operand's addressing is immediate */
                 operandAddrs[operandIndex] = ADDR_IMMEDIATE;
                 logInfo("%s - operand %d = immediate\n", operation.opName, operandIndex);
-                /* TODO: REMEMBER TO CHECK IF WRITE IMMEDIATE RETURNED AN ERROR (NUMBER OUT OF RANGE) */
-                writeImmediateToByte(&words[wordIndex++], num);
+                
+                if (!writeImmediateToByte(&words[wordIndex++], num)) {
+                    printFirstStageError(firstStageErr_operation_immediate_oor, sourceLine, sourceFileName);
+                    goto nextLoop;
+                }
                 goto nextOperand;
             }
             
@@ -239,8 +242,14 @@ void assemblerFirstStage(char fileName[]) {
                 }
                 
                 /* TODO: here the operand's addressing is a constant index method */
-                logInfo("%s - operand %d = constant index\n", operation.opName, operandIndex);
                 operandAddrs[operandIndex] = ADDR_CONSTANT_INDEX;
+                logInfo("%s - operand %d = constant index\n", operation.opName, operandIndex);
+                
+                words[wordIndex++].hasValue = 0;    /* skip the label's name */
+                if (!writeImmediateToByte(&words[wordIndex++], num)) {
+                    printFirstStageError(firstStageErr_operation_index_oor, sourceLine, sourceFileName);
+                    goto nextLoop;
+                }
                 
                 goto nextOperand;
             }
@@ -281,16 +290,17 @@ void assemblerFirstStage(char fileName[]) {
             printFirstStageError(firstStageErr_operation_extra_chars, sourceLine, sourceFileName);
             goto nextLoop;
         }
-
-        getFirstWordBin(operation.opCode, operandAddrs[SOURCE_OPERAND_INDEX], operandAddrs[DEST_OPERAND_INDEX], &firstWord);
         
-        for (; wordIndex < 3; wordIndex++)
-            clearByte(&words[wordIndex]);
+        getFirstWordBin(operation.opCode, operandAddrs[SOURCE_OPERAND_INDEX], operandAddrs[DEST_OPERAND_INDEX], &firstWord);
         
         logInfo("LINE %u:\n", sourceLine);
         printByte(firstWord);
-        for (wordIndex = 0; wordIndex < 3; wordIndex++)
-            printByte(words[wordIndex]);
+        for (i = 0; i < wordIndex; i++) {
+            if (words[i].hasValue)
+                printByte(words[i]);
+            else
+                printf("?\n");
+        }
         
         nextLoop:
         continue;
@@ -436,6 +446,11 @@ static char *getErrMessage(enum firstStageErr err) {
         case firstStageErr_operation_extra_chars:
             return "extra characters at end of line";
             
+        case firstStageErr_operation_immediate_oor:
+            return "immediate operand is out of range"; /* TODO: specify range, maybe add more arguments for errors to have more detail */
+            
+        case firstStageErr_operation_index_oor:
+            return "index is out of range";
             
         default:
             return "UNDEFINED ERROR";

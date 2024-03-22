@@ -12,12 +12,13 @@
 #define NUM_ARE_BITS    (2) /* number of A,R,E bits */
 #define NUM_SOURCE_BITS (2) /* number of bits for the source addressing method */
 #define NUM_DEST_BITS   (2) /* number of bits for the destination addressing method */
-#define NUM_OPCODE_BITS (2) /* number of bits for the opcode */
+#define NUM_OPCODE_BITS (4) /* number of bits for the opcode */
 
 
 #define BINARY_SYS_BASE (2) /* base of the binary system */
 
 typedef struct {
+    int hasValue;
     char bits[NUM_BITS];
 } Byte;
 

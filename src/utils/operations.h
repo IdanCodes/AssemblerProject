@@ -29,6 +29,7 @@
 
 #define NUM_OPERATIONS      (16)
 #define NUM_ADDR_METHODS    (4)
+#define NUM_MAX_EXTRA_WORDS (4) /* max amount of extra words (after first word) */
 
 typedef struct {
     char opCode;    /* represents a small number, using char to save storage */
@@ -39,7 +40,7 @@ typedef struct {
 
 int getOperationByName(char *name, Operation *op);
 int getOperandCount(Operation op);
-int validAddressingMethod(Operation op, char operandIndex, char addrMethod);
-int operationHasOperand(Operation op, char operandIndex);
+int validAddressingMethod(Operation op, int operandIndex, int addrMethod);
+int operationHasOperand(Operation op, int operandIndex);
 
 #endif /* OPERATIONS */

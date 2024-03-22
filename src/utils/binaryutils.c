@@ -31,6 +31,7 @@ int numberToByte(int number, Byte *pbyte) {
     for (i = bitIndex; i < NUM_BITS; i++)
         pbyte->bits[i] = 0;
     
+    pbyte->hasValue = 1;
     if (number == 0 && sign > 0)
         return 1;   /* the byte is filled with 0s */
     
@@ -77,6 +78,7 @@ int getFirstWordBin(char opcode, char sourceAddr, char destAddr, Byte *pbyte) {
     for (start = bitIndex; (bitIndex - start) < NUM_OPCODE_BITS; bitIndex++)
         pbyte->bits[bitIndex] = tempByte.bits[bitIndex - start];
     
+    /* unused bits */
     for (; bitIndex < NUM_BITS; bitIndex++)
         pbyte->bits[bitIndex] = 0;
     
@@ -88,6 +90,8 @@ void clearByte(Byte *pbyte) {
     
     for (i = 0; i < NUM_BITS; i++)
         pbyte->bits[i] = 0;
+    
+    pbyte->hasValue = 1;
 }
 
 /* returns whether the writing was successful (pretty much whether the number was in range) */
@@ -109,6 +113,7 @@ int writeImmediateToByte(Byte *pbyte, int number) {
     for (j = 0; i < NUM_BITS; i++, j++)
         pbyte->bits[i] = tempByte.bits[j];
     
+    pbyte->hasValue = 1;
     return 1;
 }
 
@@ -117,7 +122,7 @@ void printByte(Byte byte) {
     int i;
     
     for (i = NUM_BITS - 1; i >= 0; i--)
-        printf(" %d", byte.bits[i]);
+        printf("%d ", byte.bits[i]);
     printf("\n");
 }
 
