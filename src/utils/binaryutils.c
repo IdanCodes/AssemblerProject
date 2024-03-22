@@ -117,6 +117,35 @@ int writeImmediateToByte(Byte *pbyte, int number) {
     return 1;
 }
 
+void writeRegisterToByte(Byte *pbyte, int registerNumber, int operandIndex) {
+    int i, j, startBit;
+    Byte tempByte;
+
+    startBit = operandIndex == SOURCE_OPERAND_INDEX ? SOURCE_REGISTER_START_BIT : DEST_REGISTER_START_BIT;
+    
+    /* clear prefixing bits */
+    for (i = 0; i < startBit; i++)
+        pbyte->bits[i] = 0;
+    
+    /* encode into bits */
+    numberToByte(registerNumber, &tempByte);
+    for (j = 0; j < NUM_REGISTER_BITS; i++, j++)
+        pbyte->bits[i] = tempByte.bits[j];
+
+    /* clear the rest of the bits */
+    for (; i < NUM_BITS; i++)
+        pbyte->bits[i] = 0;
+    
+    pbyte->hasValue = 1;
+}
+
+void bytesOrGate(Byte b1, Byte b2, Byte *outByte) {
+    int i;
+    
+    for (i = 0; i < NUM_BITS; i++)
+        outByte->bits[i] = (char)(b1.bits[i] || b2.bits[i]);
+}
+
 /* TODO: THIS IS FOR TESTING ONLY (maybe make this print to a file in fileutils.c or something) */
 void printByte(Byte byte) {
     int i;

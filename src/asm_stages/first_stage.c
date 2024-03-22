@@ -184,6 +184,7 @@ void assemblerFirstStage(char fileName[]) {
             /* register addressing? */
             temp = *tokEnd;
             *tokEnd = '\0';
+            /* TODO: should the assembler treat something like "r10" as a label or print an error for an out of range register index? (asked in forums) */
             if (isRegisterName(token, &num)) {
                 if (!validAddressingMethod(operation, operandIndex, ADDR_REGISTER)) {
                     printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine, sourceFileName);
@@ -191,8 +192,10 @@ void assemblerFirstStage(char fileName[]) {
                 }
                 
                 /* TODO: here the operand's addressing is register method */
-                logInfo("%s - operand %d = register\n", operation.opName, operandIndex);
                 operandAddrs[operandIndex] = ADDR_REGISTER;
+                logInfo("%s - operand %d = register\n", operation.opName, operandIndex);
+                
+                writeRegisterToByte(&words[wordIndex++], num, operandIndex);
                 
                 *tokEnd = temp;
                 goto nextOperand;
@@ -264,6 +267,7 @@ void assemblerFirstStage(char fileName[]) {
                 /* TODO: here the operand's addressing is a direct (label) addressing */
                 logInfo("%s - operand %d = direct\n", operation.opName, operandIndex);
                 operandAddrs[operandIndex] = ADDR_DIRECT;
+                words[wordIndex++].hasValue = 0;
                 
                 goto nextOperand;
             }
@@ -292,6 +296,12 @@ void assemblerFirstStage(char fileName[]) {
         }
         
         getFirstWordBin(operation.opCode, operandAddrs[SOURCE_OPERAND_INDEX], operandAddrs[DEST_OPERAND_INDEX], &firstWord);
+        
+        if (operandAddrs[SOURCE_OPERAND_INDEX] == ADDR_REGISTER && operandAddrs[DEST_OPERAND_INDEX] == ADDR_REGISTER) {
+            /* "merge" the bits */
+            bytesOrGate(words[SOURCE_OPERAND_INDEX], words[DEST_OPERAND_INDEX], &words[SOURCE_OPERAND_INDEX]);
+            wordIndex--;    /* only has one extra word */
+        }
         
         logInfo("LINE %u:\n", sourceLine);
         printByte(firstWord);
