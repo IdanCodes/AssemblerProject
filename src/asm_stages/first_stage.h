@@ -15,6 +15,7 @@ typedef struct Symbol {
     char *name;
     int value;
     int flag;
+    int length;
     struct Symbol *next;
 } Symbol;
 

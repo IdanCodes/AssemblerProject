@@ -15,7 +15,7 @@ static int symbolInList(Symbol *head, char *name);
 static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol);
 static Symbol *allocSymbol(char *nameStart, char *nameEnd);
 static void registerConstant(Symbol **head, char *name, int value);
-static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value);
+static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int length);
 static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbols, Symbol **pLblSymbol);
 static enum firstStageErr fetchConstant(char *line, Symbol **symbols);
 static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data);
@@ -38,9 +38,9 @@ void assemblerFirstStage(char fileName[]) {
     char line[MAXLINE + 1]; /* account for '\0' */
     int len, *data, wordIndex, i;
     FILE *sourcef;
-    Symbol *symbols, *labelSymbol;
+    Symbol *symbols, *labelSymbol, *curr;
     Operation operation;
-    Byte firstWord, words[NUM_MAX_EXTRA_WORDS];
+    Byte firstWord, words[NUM_MAX_EXTRA_WORDS], tempByte;
     enum firstStageErr err;
     
     
@@ -143,14 +143,30 @@ void assemblerFirstStage(char fileName[]) {
             bytesOrGate(words[SOURCE_OPERAND_INDEX], words[DEST_OPERAND_INDEX], &words[SOURCE_OPERAND_INDEX]);
             wordIndex--;    /* only has one extra word */
         }
+        instructionCounter += wordIndex + 1;
         
         logInfo("LINE %u:\n", sourceLine);
+        printf("%d: ", instructionCounter + 100 - wordIndex - 1);
         printByte(firstWord);
         for (i = 0; i < wordIndex; i++) {
+            printf("%d: ", instructionCounter - (wordIndex - i) + 100);
             if (words[i].hasValue)
                 printByte(words[i]);
             else
                 printf("?\n");
+        }
+    }
+    
+    for (curr = symbols; curr != NULL; curr = curr->next) {
+        if ((curr->flag & SYMBOL_FLAG_DATA) == 0)
+            continue;
+
+        for (i = 0; i < curr->length; i++) {
+            printf("%d: [%d] ", instructionCounter + 100 + curr->value + i, data[curr->value + i]);
+            if (!numberToByte(data[curr->value + i], &tempByte)) {
+                logErr("OUT OF RANGE\n");   /* TODO: print an error for this */
+            }
+            printByte(tempByte);
         }
     }
 
@@ -371,11 +387,12 @@ static void registerConstant(Symbol **head, char *name, int value) {
     addSymToList(head, sym);
 }
 
-static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value) {
+static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int length) {
     if (lblSym == NULL)
         return;
     
     lblSym->value = value;
+    lblSym->length = length;
     lblSym->flag = SYMBOL_FLAG_DATA;
 
     addSymToList(head, lblSym);
@@ -492,7 +509,7 @@ static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *s
         token = next;
         
         /* store the number into memory and increment data counter */
-        *data = (int *)realloc(*data, sizeof(int) * (*dataCounter));
+        *data = (int *)realloc(*data, sizeof(int) * (*dataCounter + 1));
         if (*data == NULL)
             logInsuffMemErr("reallocating data for numbers in first stage");
         
@@ -512,7 +529,7 @@ static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symb
     if ((err = storeDataArgs(getNextToken(token), dataCounter, *symbols, data)) != firstStageErr_no_err)
         return err;
 
-    registerDataSymbol(symbols, lblSym, prevDC);
+    registerDataSymbol(symbols, lblSym, prevDC, *dataCounter - prevDC);
     return firstStageErr_no_err;
 }
 
@@ -554,7 +571,7 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     
     prevDC = *dataCounter;
     storeStringInData(quoteStart, quoteEnd, dataCounter, data);
-    registerDataSymbol(symbols, lblSym, prevDC);
+    registerDataSymbol(symbols, lblSym, prevDC, *dataCounter - prevDC);
     return firstStageErr_no_err;
 }
 
