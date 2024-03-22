@@ -24,6 +24,7 @@ static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter
 static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
 static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblSym);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
+static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
 static void addSymToList(Symbol **head, Symbol *symbol);
 static void freeSymbolsList(Symbol *head);
 
@@ -33,9 +34,9 @@ void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     int dataCounter, instructionCounter;
-    char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token, *tokEnd, *sqrBracksOpen, *indexStart, *indexEnd, *sqrBracksClose, temp, operandAddrs[NUM_OPERANDS];
+    char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len, *data, num, oprndCnt, operandIndex, wordIndex, i;
+    int len, *data, wordIndex, i;
     FILE *sourcef;
     Symbol *symbols, *labelSymbol;
     Operation operation;
@@ -98,12 +99,6 @@ void assemblerFirstStage(char fileName[]) {
         if (tokcmp(token, KEYWORD_DATA_DEC) == 0) {
             if ((err = fetchData(token, &dataCounter, &symbols, &data, labelSymbol)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine, sourceFileName);
-            else {
-                if (labelSymbol != NULL)
-                    logInfo("Added data '%s' - new data counter %d\n", labelSymbol->name, dataCounter);
-                else
-                    logInfo("Added unnamed data - new data counter %d\n", dataCounter);
-            }
             continue;
         }
         
@@ -111,12 +106,6 @@ void assemblerFirstStage(char fileName[]) {
         if (tokcmp(token, KEYWORD_STRING_DEC) == 0) {
             if ((err = fetchString(token, &dataCounter, &symbols, &data, labelSymbol)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine, sourceFileName);
-            else {
-                if (labelSymbol != NULL)
-                    logInfo("Added string '%s' - new data counter %d (line %u)\n", labelSymbol->name, dataCounter, sourceLine);
-                else
-                    logInfo("Added unnamed string - new data counter %d (line %u)\n", dataCounter, sourceLine);
-            }
             continue;
         }
         
@@ -141,164 +130,16 @@ void assemblerFirstStage(char fileName[]) {
         }
         
         /* fetch operands */
-        oprndCnt = 0;
         wordIndex = 0;
-        for (operandIndex = 0, token = getNextToken(token); operandIndex < NUM_OPERANDS; operandIndex++) {
-            operandAddrs[operandIndex] = 0;
-            if (!operationHasOperand(operation, operandIndex))
-                continue;   /* the operation doesn't accept this operand */
-            oprndCnt++;
-            
-            if (*token == '\0') {
-                printFirstStageError(firstStageErr_operation_expected_operand, sourceLine, sourceFileName);
-                goto nextLoop;
-            }
-            
-            /* immediate addressing? */
-            tokEnd = getEndOfOperand(token);
-            if (*token == IMMEDIATE_OPERAND_PREFIX_CHAR) {
-                token++;
-                
-                if (fetchNumber(token, tokEnd, &num, symbols) != firstStageErr_no_err) {
-                    /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
-                    printFirstStageError(firstStageErr_operation_invalid_immediate, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-
-                if (!validAddressingMethod(operation, operandIndex, ADDR_IMMEDIATE)) {
-                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                
-                /* TODO: here the operand's addressing is immediate */
-                operandAddrs[operandIndex] = ADDR_IMMEDIATE;
-                logInfo("%s - operand %d = immediate\n", operation.opName, operandIndex);
-                
-                if (!writeImmediateToByte(&words[wordIndex++], num)) {
-                    printFirstStageError(firstStageErr_operation_immediate_oor, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                goto nextOperand;
-            }
-            
-            /* register addressing? */
-            temp = *tokEnd;
-            *tokEnd = '\0';
-            /* TODO: should the assembler treat something like "r10" as a label or print an error for an out of range register index? (asked in forums) */
-            if (isRegisterName(token, &num)) {
-                if (!validAddressingMethod(operation, operandIndex, ADDR_REGISTER)) {
-                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                
-                /* TODO: here the operand's addressing is register method */
-                operandAddrs[operandIndex] = ADDR_REGISTER;
-                logInfo("%s - operand %d = register\n", operation.opName, operandIndex);
-                
-                writeRegisterToByte(&words[wordIndex++], num, operandIndex);
-                
-                *tokEnd = temp;
-                goto nextOperand;
-            }
-            *tokEnd = temp;
-            
-            /* constant indexing addressing? */
-            sqrBracksOpen = getFirstOrEnd(token, OPERAND_INDEX_START_CHAR);
-            if (sqrBracksOpen < tokEnd) {  /* '[' character must appear next to the array's name (no spaces) */
-                /* TODO: maybe make this a function of its own */
-                sqrBracksClose = getFirstOrEnd(sqrBracksOpen, OPERAND_INDEX_END_CHAR);
-                if (*sqrBracksClose == '\0') {
-                    printFirstStageError(firstStageErr_operation_expected_closing_sqr_bracks, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                tokEnd = getEndOfOperand(sqrBracksClose);   /* there could be a space inside the brackets - update the token end */
-                
-                indexStart = getStart(sqrBracksOpen + 1);   /* skip the spaces between '[' and start of operand */
-                if (indexStart == sqrBracksClose) {
-                    printFirstStageError(firstStageErr_operation_expected_index, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                
-                /* get the last character of the index */
-                for (indexEnd = sqrBracksClose - 1; isspace(*indexEnd); indexEnd--)
-                    ;
-                
-                if (getTokEnd(indexStart) < indexEnd) { /* the index is not a single token */
-                    printFirstStageError(firstStageErr_operation_invalid_index, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                
-                if (fetchNumber(indexStart, indexEnd + 1, &num, symbols) != firstStageErr_no_err) {
-                    /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
-                    printFirstStageError(firstStageErr_operation_invalid_index, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                
-                if (!validSymbolName(token, sqrBracksOpen)) {
-                    printFirstStageError(firstStageErr_operation_invalid_label_name, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                
-                if (!validAddressingMethod(operation, operandIndex, ADDR_CONSTANT_INDEX)) {
-                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                
-                /* TODO: here the operand's addressing is a constant index method */
-                operandAddrs[operandIndex] = ADDR_CONSTANT_INDEX;
-                logInfo("%s - operand %d = constant index\n", operation.opName, operandIndex);
-                
-                words[wordIndex++].hasValue = 0;    /* skip the label's name */
-                if (!writeImmediateToByte(&words[wordIndex++], num)) {
-                    printFirstStageError(firstStageErr_operation_index_oor, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                
-                goto nextOperand;
-            }
-            else if (validSymbolName(token, tokEnd)) {
-                /* the operand must be a direct (label) addressing */
-                if (!validAddressingMethod(operation, operandIndex, ADDR_DIRECT)) {
-                    logInfo("Operation %s does not accept direct addressing as operand %d\n", operation.opName, operandIndex);
-                    printFirstStageError(firstStageErr_operation_invalid_addr_method, sourceLine, sourceFileName);
-                    goto nextLoop;
-                }
-                
-                /* TODO: here the operand's addressing is a direct (label) addressing */
-                logInfo("%s - operand %d = direct\n", operation.opName, operandIndex);
-                operandAddrs[operandIndex] = ADDR_DIRECT;
-                words[wordIndex++].hasValue = 0;
-                
-                goto nextOperand;
-            }
-            else {
-                printFirstStageError(firstStageErr_operation_invalid_operand, sourceLine, sourceFileName);
-                goto nextLoop;
-            }
-            
-            nextOperand:
-            tokEnd = getStart(tokEnd);  /* skip spaces */
-            if (*tokEnd != '\0' && *tokEnd != ',') {
-                printFirstStageError(firstStageErr_operation_expected_comma, sourceLine, sourceFileName);
-                goto nextLoop;
-            }
-            
-            if (*tokEnd != '\0')
-                token = getStart(tokEnd + 1);
-            else
-                token = tokEnd;
-        }
-        
-        /* check for extra text following the operands */
-        if (*token != '\0') {
-            printFirstStageError(firstStageErr_operation_extra_chars, sourceLine, sourceFileName);
-            goto nextLoop;
+        if ((err = fetchOperands(token, operation, symbols, words, &wordIndex, operandAddrs)) != firstStageErr_no_err) {
+            printFirstStageError(err, sourceLine, sourceFileName);
+            continue;
         }
         
         getFirstWordBin(operation.opCode, operandAddrs[SOURCE_OPERAND_INDEX], operandAddrs[DEST_OPERAND_INDEX], &firstWord);
         
+        /* "merge" the operands if both are register addressing */
         if (operandAddrs[SOURCE_OPERAND_INDEX] == ADDR_REGISTER && operandAddrs[DEST_OPERAND_INDEX] == ADDR_REGISTER) {
-            /* "merge" the bits */
             bytesOrGate(words[SOURCE_OPERAND_INDEX], words[DEST_OPERAND_INDEX], &words[SOURCE_OPERAND_INDEX]);
             wordIndex--;    /* only has one extra word */
         }
@@ -311,9 +152,6 @@ void assemblerFirstStage(char fileName[]) {
             else
                 printf("?\n");
         }
-        
-        nextLoop:
-        continue;
     }
 
     
@@ -578,7 +416,7 @@ static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbol
 }
 
 static enum firstStageErr fetchConstant(char *line, Symbol **symbols) {
-    char *name, *token, *equalsSign, *strVal, tempC;
+    char *name, *token, *equalsSign, *strVal;
     int numberValue;
     
     token = getStart(line);
@@ -619,11 +457,6 @@ static enum firstStageErr fetchConstant(char *line, Symbol **symbols) {
 
     /* register the new constant */
     registerConstant(symbols, name, numberValue);
-    
-    /* TODO: remove this debug log */
-    tempC = *(getTokEnd(name) + 1) = '\0';
-    logInfo("Registered constant '%s': %d.\n", name, numberValue);
-    *(getTokEnd(name) + 1) = tempC;
     
     return firstStageErr_no_err;
 }
@@ -704,7 +537,7 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     char *quoteStart, *quoteEnd;
     
     quoteStart = getFirstOrEnd(token, '"');
-    if (*quoteStart == '\0' || (token = getNextToken(token)) < quoteStart)
+    if (*quoteStart == '\0' || getNextToken(token) < quoteStart)
         return firstStageErr_string_expected_quotes;
 
     for (quoteEnd = quoteStart + 1; *quoteEnd != '\0'; quoteEnd++)
@@ -760,8 +593,6 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
     tempSym->flag = SYMBOL_FLAG_EXTERN;
 
     addSymToList(&symbols, tempSym);
-    
-    logInfo("Added extern variable '%s'\n", token);
     return firstStageErr_no_err;
 }
 
@@ -797,10 +628,122 @@ static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *
         return firstStageErr_data_const_not_found;
     }
     
-    logInfo("Using data from '%s' = %d\n", start, tempSym->value);
     *num = tempSym->value;
-
     *end = temp;
+    return firstStageErr_no_err;
+}
+
+static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]) {
+    int operandIndex, num;
+    char temp, *tokEnd, *sqrBracksOpen, *sqrBracksClose, *indexStart, *indexEnd;
+    
+    *wordIndex = 0;
+    for (operandIndex = 0, token = getNextToken(token); operandIndex < NUM_OPERANDS; operandIndex++) {
+        operandAddrs[operandIndex] = 0;
+        if (!operationHasOperand(operation, operandIndex))
+            continue;   /* the operation doesn't accept this operand */
+
+        if (*token == '\0')
+            return firstStageErr_operation_expected_operand;
+
+        /* immediate addressing? */
+        tokEnd = getEndOfOperand(token);
+        if (*token == IMMEDIATE_OPERAND_PREFIX_CHAR) {
+            token++;
+
+            /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
+            if (fetchNumber(token, tokEnd, &num, symbols) != firstStageErr_no_err)
+                return firstStageErr_operation_invalid_immediate;
+
+            if (!validAddressingMethod(operation, operandIndex, ADDR_IMMEDIATE))
+                return firstStageErr_operation_invalid_addr_method;
+            
+            operandAddrs[operandIndex] = ADDR_IMMEDIATE;
+
+            if (!writeImmediateToByte(&words[(*wordIndex)++], num))
+                return firstStageErr_operation_immediate_oor;
+            goto nextOperand;
+        }
+
+        /* register addressing? */
+        temp = *tokEnd;
+        *tokEnd = '\0';
+        /* TODO: should the assembler treat something like "r10" as a label or print an error for an out of range register index? (asked in forums) */
+        if (isRegisterName(token, &num)) {
+            if (!validAddressingMethod(operation, operandIndex, ADDR_REGISTER))
+                return firstStageErr_operation_invalid_addr_method;
+            
+            operandAddrs[operandIndex] = ADDR_REGISTER;
+            writeRegisterToByte(&words[(*wordIndex)++], num, operandIndex);
+            
+            *tokEnd = temp;
+            goto nextOperand;
+        }
+        *tokEnd = temp;
+
+        /* constant indexing addressing? */
+        sqrBracksOpen = getFirstOrEnd(token, OPERAND_INDEX_START_CHAR);
+        if (sqrBracksOpen < tokEnd) {  /* '[' character must appear next to the array's name (no spaces) */
+            sqrBracksClose = getFirstOrEnd(sqrBracksOpen, OPERAND_INDEX_END_CHAR);
+            if (*sqrBracksClose == '\0')
+                return firstStageErr_operation_expected_closing_sqr_bracks;
+            tokEnd = getEndOfOperand(sqrBracksClose);   /* there could be a space inside the brackets - update the token end */
+            
+            indexStart = getStart(sqrBracksOpen + 1);   /* skip the spaces between '[' and start of operand */
+            if (indexStart == sqrBracksClose)
+                return firstStageErr_operation_expected_index;
+
+            /* get the last character of the index */
+            for (indexEnd = sqrBracksClose - 1; isspace(*indexEnd); indexEnd--)
+                ;
+
+            if (getTokEnd(indexStart) < indexEnd)   /* the index is not a single token */
+                return firstStageErr_operation_invalid_index;
+
+            /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
+            if (fetchNumber(indexStart, indexEnd + 1, &num, symbols) != firstStageErr_no_err)
+                return firstStageErr_operation_invalid_index;
+
+            if (!validSymbolName(token, sqrBracksOpen))
+                return firstStageErr_operation_invalid_label_name;
+
+            if (!validAddressingMethod(operation, operandIndex, ADDR_CONSTANT_INDEX))
+                return firstStageErr_operation_invalid_addr_method;
+            
+            operandAddrs[operandIndex] = ADDR_CONSTANT_INDEX;
+            words[(*wordIndex)++].hasValue = 0;    /* skip the label's name */
+            if (!writeImmediateToByte(&words[(*wordIndex)++], num))
+                return firstStageErr_operation_index_oor;
+        }
+        else if (validSymbolName(token, tokEnd)) {
+            /* the operand must be a direct (label) addressing */
+            if (!validAddressingMethod(operation, operandIndex, ADDR_DIRECT)) {
+                /* TODO: remove this log */
+                logInfo("Operation %s does not accept direct addressing as operand %d\n", operation.opName, operandIndex);
+                return firstStageErr_operation_invalid_addr_method;
+            }
+            
+            operandAddrs[operandIndex] = ADDR_DIRECT;
+            words[(*wordIndex)++].hasValue = 0;
+        }
+        else
+            return firstStageErr_operation_invalid_operand;
+
+        nextOperand:
+        tokEnd = getStart(tokEnd);  /* skip spaces */
+        if (*tokEnd != '\0' && *tokEnd != ',')
+            return firstStageErr_operation_expected_comma;
+
+        if (*tokEnd != '\0')
+            token = getStart(tokEnd + 1);
+        else
+            token = tokEnd;
+    }
+
+    /* check for extra text following the operands */
+    if (*token != '\0')
+        return firstStageErr_operation_extra_chars;
+    
     return firstStageErr_no_err;
 }
 
