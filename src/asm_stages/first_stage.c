@@ -798,7 +798,7 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
             
             operandAddrs[operandIndex] = ADDR_CONSTANT_INDEX;
             words[(*wordIndex)++].hasValue = 0;    /* skip the label's name */
-            if (!writeImmediateToByte(&words[(*wordIndex)++], num))
+            if (!writeImmediateToByte(&words[(*wordIndex)++], num) || num < 0)
                 return firstStageErr_operation_index_oor;
         }
         else if (validSymbolName(token, tokEnd)) {
