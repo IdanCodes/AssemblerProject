@@ -35,10 +35,10 @@ void assemblerFirstStage(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     int dataCounter, instructionCounter;
-    char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
+    char sourceFileName[FILENAME_MAX], binFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
     char line[MAXLINE + 1]; /* account for '\0' */
     int len, *data, wordIndex, i;
-    FILE *sourcef;
+    FILE *sourcef, *binf;
     Symbol *symbols, *labelSymbol, *curr;
     Operation operation;
     Byte firstWord, words[NUM_MAX_EXTRA_WORDS], tempByte;
@@ -47,9 +47,10 @@ void assemblerFirstStage(char fileName[]) {
     
     /* -- open files -- */
     sprintf(sourceFileName, "%s.%s", fileName, PRE_ASSEMBLED_FILE_EXTENSION);
-    sprintf(outFileName, "%s.%s", fileName, OBJECT_FILE_EXTENSION); 
+    sprintf(binFileName, "%s.%s", fileName, BINARY_FILE_EXTENSION); 
     
     openFile(sourceFileName, "r", &sourcef);
+    openFile(binFileName, "w", &binf);
     
     
     /* -- main loop -- */
@@ -163,15 +164,15 @@ void assemblerFirstStage(char fileName[]) {
         }
         instructionCounter += wordIndex + 1;
         
-        logInfo("LINE %u:\n", sourceLine);
-        printf("%d: ", instructionCounter + 100 - wordIndex - 1);
-        printByte(firstWord);
+        /*logInfo("LINE %u:\n", sourceLine);*/
+        fprintf(binf, "%d ", instructionCounter + 100 - wordIndex - 1);
+        printByteToFile(firstWord, binf);
         for (i = 0; i < wordIndex; i++) {
-            printf("%d: ", instructionCounter - (wordIndex - i) + 100);
+            fprintf(binf, "%d ", instructionCounter - (wordIndex - i) + 100);
             if (words[i].hasValue)
-                printByte(words[i]);
+                printByteToFile(words[i], binf);
             else
-                printf("?\n");
+                fprintf(binf, "?\n");
         }
     }
     
@@ -180,11 +181,10 @@ void assemblerFirstStage(char fileName[]) {
             continue;
 
         for (i = 0; i < curr->length; i++) {
-            printf("%d: [%d] ", instructionCounter + 100 + curr->value + i, data[curr->value + i]);
-            if (!numberToByte(data[curr->value + i], &tempByte)) {
+            fprintf(binf, "%d ", instructionCounter + 100 + curr->value + i);
+            if (!numberToByte(data[curr->value + i], &tempByte))
                 logErr("OUT OF RANGE\n");   /* TODO: print an error for this */
-            }
-            printByte(tempByte);
+            printByteToFile(tempByte, binf);
         }
     }
 

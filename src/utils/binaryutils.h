@@ -31,6 +31,7 @@ int writeImmediateToByte(Byte *pbyte, int number);
 void writeRegisterToByte(Byte *pbyte, int registerNumber, int operandIndex);
 void bytesOrGate(Byte b1, Byte b2, Byte *outByte);
 void clearByte(Byte *pbyte);
+void printByteToFile(Byte byte, FILE *fp);
 void printByte(Byte byte);
 
 #endif  /* BINARYUTILS */

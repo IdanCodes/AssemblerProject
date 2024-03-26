@@ -146,13 +146,17 @@ void bytesOrGate(Byte b1, Byte b2, Byte *outByte) {
         outByte->bits[i] = (char)(b1.bits[i] || b2.bits[i]);
 }
 
+void printByteToFile(Byte byte, FILE *fp) {
+    int i;
+
+    for (i = NUM_BITS - 1; i >= 0; i--)
+        fprintf(fp, "%d ", byte.bits[i]);
+    fprintf(fp, "\n");
+}
+
 /* TODO: THIS IS FOR TESTING ONLY (maybe make this print to a file in fileutils.c or something) */
 void printByte(Byte byte) {
-    int i;
-    
-    for (i = NUM_BITS - 1; i >= 0; i--)
-        printf("%d ", byte.bits[i]);
-    printf("\n");
+    printByteToFile(byte, stdout);
 }
 
 /* flips a bit */
