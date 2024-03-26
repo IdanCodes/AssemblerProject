@@ -125,8 +125,12 @@ void assemblerFirstStage(char fileName[]) {
         
         /* entry instruction? */
         if (tokcmp(token, KEYWORD_ENTRY_DEC) == 0) {
-            if ((err = validateEntry(token, symbols, labelSymbol)) != firstStageErr_no_err)
-                printFirstStageError(err, sourceLine, sourceFileName);
+            if ((err = validateEntry(token, symbols, labelSymbol)) != firstStageErr_no_err) {
+                if (err == firstStageErr_entry_define_label)
+                    logWarn("ignoring label defined in .entry instruction (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
+                else
+                    printFirstStageError(err, sourceLine, sourceFileName);
+            }
             continue;
         }
         
@@ -276,18 +280,30 @@ static char *getErrMessage(enum firstStageErr err) {
             
         /* -- .extern -- */
         case firstStageErr_extern_invalid_lbl_name:
-            return "invalid label name for extern label";
+            return "invalid label name for extern parameter";
             
         case firstStageErr_extern_extra_chars:
-            return "extra characters following external label";
+            return "extra characters following .extern parameter";
             
         case firstStageErr_extern_def_label_same_name:
-            ;   /* fall through */
+            return "label and .extern parameter have the same name";
+            
         case firstStageErr_extern_label_exists:
             return "a label with this name already exists in this file";
             
         case firstStageErr_extern_saved_keyword:
             return "can't used .extern on a saved keyword";
+          
+            
+        /* -- .entry -- */
+        case firstStageErr_entry_invalid_lbl_name:
+            return "invalid label name for entry parameter";
+            
+        case firstStageErr_entry_extra_chars:
+            return "extra characters following .entry parameter";
+            
+        case firstStageErr_entry_def_label_same_name:
+            return "label and .entry parameter have the same name";
             
             
         /* -- operations -- */
@@ -634,6 +650,35 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
     tempSym->flag = SYMBOL_FLAG_EXTERN;
 
     addSymToList(&symbols, tempSym);
+    return err;
+}
+
+static enum firstStageErr validateEntry(char *token, Symbol *symbols, Symbol *lblSym) {
+    char *tokEnd, temp;
+    enum firstStageErr err;
+    
+    err = firstStageErr_no_err;
+    
+    token = getNextToken(token);
+    if (!validSymbolName(token, tokEnd = getTokEnd(token)))
+        return firstStageErr_entry_invalid_lbl_name;
+
+    if (*getNextToken(token) != '\0')
+        return firstStageErr_entry_extra_chars;
+    
+    temp = *(tokEnd + 1);
+    *(tokEnd + 1) = '\0';
+
+    if (lblSym != NULL) {
+        if (tokcmp(lblSym->name, token) == 0) {
+            *(tokEnd + 1) = temp;
+            return firstStageErr_entry_def_label_same_name;
+        }
+        err = firstStageErr_entry_define_label;
+    }
+    
+    *(tokEnd + 1) = temp;
+    
     return err;
 }
 
