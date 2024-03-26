@@ -23,6 +23,7 @@ static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symb
 static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter, int **data);
 static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
 static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblSym);
+static enum firstStageErr validateEntry(char *token, Symbol *symbols, Symbol *lblSym);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
 static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
 static void addSymToList(Symbol **head, Symbol *symbol);
@@ -111,7 +112,20 @@ void assemblerFirstStage(char fileName[]) {
         
         /* .extern instruction? */
         if (tokcmp(token, KEYWORD_EXTERN_DEC) == 0) {
-            if ((err = fetchExtern(token, symbols, labelSymbol)) != firstStageErr_no_err)
+            if ((err = fetchExtern(token, symbols, labelSymbol)) != firstStageErr_no_err) {
+                if (err == firstStageErr_extern_exists)
+                    logWarn("label was already declared as extern (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
+                else if (err == firstStageErr_extern_define_label)
+                    logWarn("ignoring label defined in .extern instruction (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
+                else
+                    printFirstStageError(err, sourceLine, sourceFileName);
+            }
+            continue;
+        }
+        
+        /* entry instruction? */
+        if (tokcmp(token, KEYWORD_ENTRY_DEC) == 0) {
+            if ((err = validateEntry(token, symbols, labelSymbol)) != firstStageErr_no_err)
                 printFirstStageError(err, sourceLine, sourceFileName);
             continue;
         }
@@ -578,6 +592,9 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
 static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblSym) {
     char *tokEnd, temp;
     Symbol *tempSym;
+    enum firstStageErr err;
+    
+    err = firstStageErr_no_err;
     
     token = getNextToken(token);
     if (!validSymbolName(token, tokEnd = getTokEnd(token)))
@@ -589,9 +606,12 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
     temp = *(tokEnd + 1);
     *(tokEnd + 1) = '\0';
 
-    if (lblSym != NULL && tokcmp(lblSym->name, token) == 0) {
-        *(tokEnd + 1) = temp;
-        return firstStageErr_extern_def_label_same_name;
+    if (lblSym != NULL) {
+        if (tokcmp(lblSym->name, token) == 0) {
+            *(tokEnd + 1) = temp;
+            return firstStageErr_extern_def_label_same_name;
+        }
+        err = firstStageErr_extern_define_label;
     }
 
     if (isSavedKeyword(token)) {
@@ -599,9 +619,13 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
         return firstStageErr_extern_saved_keyword;
     }
 
-    if (getSymbolByName(token, symbols, &tempSym) && tempSym->flag != SYMBOL_FLAG_EXTERN) {
-        *(tokEnd + 1) = temp;
-        return firstStageErr_extern_label_exists;
+    if (getSymbolByName(token, symbols, &tempSym)) {
+        if (tempSym->flag != SYMBOL_FLAG_EXTERN) {
+            *(tokEnd + 1) = temp;
+            return firstStageErr_extern_label_exists;
+        }
+        else
+            err = firstStageErr_extern_exists;
     }
 
     *(tokEnd + 1) = temp;
@@ -610,7 +634,7 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
     tempSym->flag = SYMBOL_FLAG_EXTERN;
 
     addSymToList(&symbols, tempSym);
-    return firstStageErr_no_err;
+    return err;
 }
 
 /**

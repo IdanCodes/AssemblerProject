@@ -56,6 +56,8 @@ enum firstStageErr {
     firstStageErr_extern_def_label_same_name,   /* defining label with the same name as the .extern parameter */
     firstStageErr_extern_label_exists,  /* the label is already defined in the file */
     firstStageErr_extern_saved_keyword, /* extern label is a saved keyword */
+    firstStageErr_extern_define_label,  /* a label is defined in the beginning of an extern instruction */
+    firstStageErr_extern_exists, /* this label was already declared as extern */ 
     
     /* operation errors */
     firstStageErr_operation_not_found,  /* invalid operator name */
