@@ -23,7 +23,7 @@ static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symb
 static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter, int **data);
 static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
 static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblSym);
-static enum firstStageErr validateEntry(char *token, Symbol *symbols, Symbol *lblSym);
+static enum firstStageErr validateEntry(char *token, Symbol *lblSym);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
 static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
 static void addSymToList(Symbol **head, Symbol *symbol);
@@ -31,15 +31,16 @@ static void freeSymbolsList(Symbol *head);
 
 /* DOCUMENT */
 /* fileName is the file's name without the extension */
-void assemblerFirstStage(char fileName[]) {
+/* returns 1 if there was no error, 0 if there was one */
+int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     int dataCounter, instructionCounter;
     char sourceFileName[FILENAME_MAX], binFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len, *data, wordIndex, i;
+    int len, wordIndex, i, hasErr;
     FILE *sourcef, *binf;
-    Symbol *symbols, *labelSymbol, *curr;
+    Symbol *labelSymbol, *curr;
     Operation operation;
     Byte firstWord, words[NUM_MAX_EXTRA_WORDS], tempByte;
     enum firstStageErr err;
@@ -54,21 +55,21 @@ void assemblerFirstStage(char fileName[]) {
     
     
     /* -- main loop -- */
-    data = (int *)malloc(sizeof(int));
-    if (data == NULL)
+    *data = (int *)malloc(sizeof(int));
+    if (*data == NULL)
         logInsuffMemErr("allocating data for first stage");
     
     instructionCounter = 0;
     dataCounter = 0;
     sourceLine = 0;
     labelSymbol = NULL;
-    symbols = NULL;
-    err = firstStageErr_no_err;
+    *symbols = NULL;
+    hasErr = 0;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine += skippedLines;
         /* if the previous symbol wasn't used, free it */
         if (labelSymbol != NULL) {
-            if (!symbolInList(symbols, labelSymbol->name)) {
+            if (!symbolInList(*symbols, labelSymbol->name)) {
                 free(labelSymbol->name);
                 free(labelSymbol);
             }
@@ -81,56 +82,69 @@ void assemblerFirstStage(char fileName[]) {
         /* if this is a valid (label) declaration, there must be a white character seperating the label name and the rest of the line */
         if (*(tokEnd = getTokEnd(token)) == LABEL_END_CHAR) 
         {
-            if ((err = fetchLabel(&token, tokEnd, &symbols, &labelSymbol)) != firstStageErr_no_err) {
+            if ((err = fetchLabel(&token, tokEnd, symbols, &labelSymbol)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
+                hasErr = 1;
                 continue;
             }
         }
 
         /* constant declaration? */
         if (tokcmp(token, KEYWORD_CONST_DEC) == 0) {
-            if (labelSymbol != NULL)
+            if (labelSymbol != NULL) {
                 printFirstStageError(firstStageErr_label_const_definition, sourceLine, sourceFileName);
-            else if ((err = fetchConstant(line, &symbols)) != firstStageErr_no_err)
+                hasErr = 1;
+            }
+            else if ((err = fetchConstant(line, symbols)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
+                hasErr = 1;
+            }
             continue;
         }
         
         /* storage instruction? */
         /* .data */
         if (tokcmp(token, KEYWORD_DATA_DEC) == 0) {
-            if ((err = fetchData(token, &dataCounter, &symbols, &data, labelSymbol)) != firstStageErr_no_err)
+            if ((err = fetchData(token, &dataCounter, symbols, data, labelSymbol)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
+                hasErr = 1;
+            }
             continue;
         }
         
         /* .string */
         if (tokcmp(token, KEYWORD_STRING_DEC) == 0) {
-            if ((err = fetchString(token, &dataCounter, &symbols, &data, labelSymbol)) != firstStageErr_no_err)
+            if ((err = fetchString(token, &dataCounter, symbols, data, labelSymbol)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
+                hasErr = 1;
+            }
             continue;
         }
         
         /* .extern instruction? */
         if (tokcmp(token, KEYWORD_EXTERN_DEC) == 0) {
-            if ((err = fetchExtern(token, symbols, labelSymbol)) != firstStageErr_no_err) {
+            if ((err = fetchExtern(token, *symbols, labelSymbol)) != firstStageErr_no_err) {
                 if (err == firstStageErr_extern_exists)
                     logWarn("label was already declared as extern (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
                 else if (err == firstStageErr_extern_define_label)
                     logWarn("ignoring label defined in .extern instruction (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
-                else
+                else {
                     printFirstStageError(err, sourceLine, sourceFileName);
+                    hasErr = 1;
+                }
             }
             continue;
         }
         
         /* entry instruction? */
         if (tokcmp(token, KEYWORD_ENTRY_DEC) == 0) {
-            if ((err = validateEntry(token, symbols, labelSymbol)) != firstStageErr_no_err) {
+            if ((err = validateEntry(token, labelSymbol)) != firstStageErr_no_err) {
                 if (err == firstStageErr_entry_define_label)
                     logWarn("ignoring label defined in .entry instruction (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
-                else
+                else {
                     printFirstStageError(err, sourceLine, sourceFileName);
+                    hasErr = 1;
+                }
             }
             continue;
         }
@@ -138,6 +152,7 @@ void assemblerFirstStage(char fileName[]) {
         /* is this an invalid operation? */
         if (!getOperationByName(token, &operation)) {
             printFirstStageError(firstStageErr_operation_not_found, sourceLine, sourceFileName);
+            hasErr = 1;
             continue;
         }
 
@@ -145,13 +160,14 @@ void assemblerFirstStage(char fileName[]) {
         if (labelSymbol != NULL) {
             labelSymbol->value = instructionCounter;
             labelSymbol->flag = SYMBOL_FLAG_CODE;
-            addSymToList(&symbols, labelSymbol);
+            addSymToList(symbols, labelSymbol);
         }
         
         /* fetch operands */
         wordIndex = 0;
-        if ((err = fetchOperands(token, operation, symbols, words, &wordIndex, operandAddrs)) != firstStageErr_no_err) {
+        if ((err = fetchOperands(token, operation, *symbols, words, &wordIndex, operandAddrs)) != firstStageErr_no_err) {
             printFirstStageError(err, sourceLine, sourceFileName);
+            hasErr = 1;
             continue;
         }
         
@@ -164,7 +180,6 @@ void assemblerFirstStage(char fileName[]) {
         }
         instructionCounter += wordIndex + 1;
         
-        /*logInfo("LINE %u:\n", sourceLine);*/
         fprintf(binf, "%d ", instructionCounter + 100 - wordIndex - 1);
         printByteToFile(firstWord, binf);
         for (i = 0; i < wordIndex; i++) {
@@ -176,13 +191,13 @@ void assemblerFirstStage(char fileName[]) {
         }
     }
     
-    for (curr = symbols; curr != NULL; curr = curr->next) {
+    for (curr = *symbols; curr != NULL; curr = curr->next) {
         if ((curr->flag & SYMBOL_FLAG_DATA) == 0)
             continue;
 
         for (i = 0; i < curr->length; i++) {
             fprintf(binf, "%d ", instructionCounter + 100 + curr->value + i);
-            if (!numberToByte(data[curr->value + i], &tempByte))
+            if (!numberToByte((*data)[curr->value + i], &tempByte))
                 logErr("OUT OF RANGE\n");   /* TODO: print an error for this */
             printByteToFile(tempByte, binf);
         }
@@ -191,13 +206,18 @@ void assemblerFirstStage(char fileName[]) {
     
     /* -- cleanup -- */
     
-    if (labelSymbol != NULL && !symbolInList(symbols, labelSymbol->name)) {   /* free previous label */
+    if (labelSymbol != NULL && !symbolInList(*symbols, labelSymbol->name)) {   /* free previous label */
         free(labelSymbol->name);
         free(labelSymbol);
     }
 
-    free(data);
-    freeSymbolsList(symbols);
+    if (hasErr) {
+        free(*data);
+        freeSymbolsList(*symbols);
+        deleteFile(binFileName);
+    }
+    
+    return !hasErr;
 }
 
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName) {
@@ -653,7 +673,7 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
     return err;
 }
 
-static enum firstStageErr validateEntry(char *token, Symbol *symbols, Symbol *lblSym) {
+static enum firstStageErr validateEntry(char *token, Symbol *lblSym) {
     char *tokEnd, temp;
     enum firstStageErr err;
     

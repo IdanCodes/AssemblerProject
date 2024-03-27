@@ -7,10 +7,14 @@
 #define FILENAME "test"
 
 int main(void) {
+    int *data;
+    Symbol *symbols;
+    
     if (preAssemble(FILENAME) != preAssembleErr_no_err)
         return 1;
 
-    assemblerFirstStage(FILENAME);  /* TODO: check if there was an error after the first stage */
+    if (!assemblerFirstStage(FILENAME, &data, &symbols))
+        return 1;
     
     return 0;
 }

@@ -81,7 +81,7 @@ enum firstStageErr {
     firstStageErr_operation_index_oor   /* constant index was out of range */
 };
 
-void assemblerFirstStage(char fileName[]);
+int assemblerFirstStage(char fileName[], int **data, Symbol **symbols);
 int validSymbolName(char *start, char *end);
 
 #endif /* FIRST_STAGE */
