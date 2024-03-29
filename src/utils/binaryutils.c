@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
 #include "binaryutils.h"
+#include "logger.h"
 
 int abs(int x); /* from <math.h> */
 static char getFlippedBit(char b);
@@ -13,7 +15,7 @@ int inByteRange(int num) {
 /* returns whether the conversion was successful
  * - assuming pbyte isn't NULL */
 int numberToByte(int number, Byte *pbyte) {
-    const int firstBitValue = 1;    /* value of LSB (least significant bit) */
+    const int firstBitValue = 1;    /* byte of LSB (least significant bit) */
     int bitValue, bitIndex, sign, temp, i;
     
     if (!inByteRange(number))
@@ -23,7 +25,7 @@ int numberToByte(int number, Byte *pbyte) {
     if (sign < 0)
         number += 1;
     
-    temp = (number = abs(number));
+    temp = (number = number > 0 ? number : -number);
 
     /* find the leftmost used bit */
     for (bitValue = firstBitValue, bitIndex = 0; bitValue <= temp; bitValue *= BINARY_SYS_BASE, bitIndex++) {
@@ -156,11 +158,6 @@ void printByteToFile(Byte byte, FILE *fp) {
     for (i = NUM_BITS - 1; i >= 0; i--)
         fprintf(fp, "%d ", byte.bits[i]);
     fprintf(fp, "\n");
-}
-
-/* TODO: THIS IS FOR TESTING ONLY (maybe make this print to a file in fileutils.c or something) */
-void printByte(Byte byte) {
-    printByteToFile(byte, stdout);
 }
 
 /* flips a bit */

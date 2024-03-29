@@ -9,9 +9,9 @@ NUM: .define 10
 
 ; -- macro
 mcr my_mcr
-; add NUM to the value in r1
+; add NUM to the byte in r1
     add NUM, r1
-; print the value in r1
+; print the byte in r1
     prn r1
 endmcr
 

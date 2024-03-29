@@ -23,7 +23,7 @@ void openFile(char fileName[], char mode[], FILE **pfile) {
  * @param mode file open mode
  * @param pfile a FILE* address to place the requested file's FILE* into
  * @return if there was a problem opening the file (insuff perms or file doesn't exist), returns 0.
- * otherwise, returns a non-zero value and sets 'pfile' to point at the requested FILE*
+ * otherwise, returns a non-zero byte and sets 'pfile' to point at the requested FILE*
  */
 int tryOpenFile(char fileName[], char mode[], FILE **pfile) {
     return (*pfile = fopen(fileName, mode)) != NULL;
@@ -42,7 +42,7 @@ void deleteFile(char fileName[]) {
  * Safely delete a file
  * @param fileName the full name of the file to delete (including file extension)
  * @return if there was a problem opening the file (insuff perms or file doesn't exist), returns 0.
- * otherwise, returns a non-zero value and sets 'pfile' to point at the requested FILE*
+ * otherwise, returns a non-zero byte and sets 'pfile' to point at the requested FILE*
  */
 int tryDeleteFile(char fileName[]) {
     return (remove(fileName) == 0);

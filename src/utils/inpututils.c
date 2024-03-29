@@ -8,7 +8,7 @@
  * @param line the string to read the next line into. closing '\n' or EOF are replaced with a '\0' (assuming it is big enough to store the line)
  * @param maxlen the maximum amount of characters to read
  * @param len the length of the actual line read
- * @return an enum getLineStatus value according to the input
+ * @return an enum getLineStatus byte according to the input
  */
 enum getLineStatus getLine(FILE *fp, char line[], unsigned int maxlen, int *len) {
     int c;

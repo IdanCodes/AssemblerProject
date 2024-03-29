@@ -2,6 +2,8 @@
 #define FIRST_STAGE
 
 /* make a seperate file to store keyword definitions */
+#include "../structures/bytelist.h"
+
 #define LABEL_MAX_LENGTH  31
 #define INSTRUCTION_COUNTER_OFFSET  100
 
@@ -26,11 +28,11 @@ enum firstStageErr {
     firstStageErr_define_name_expected, /* name expected */
     firstStageErr_define_unexpected_chars,  /* unexpected chars at the end of a define statement */
     firstStageErr_define_expected_equal_sign,   /* expected after constant name */
-    firstStageErr_define_value_expected,    /* expected value */
+    firstStageErr_define_value_expected,    /* expected byte */
     firstStageErr_define_invalid_name,  /* the constant's name was invalid */
     firstStageErr_define_saved_keyword, /* the constant's name is a saved keyword */
     firstStageErr_define_name_taken,    /* name of constant taken */
-    firstStageErr_define_value_nan, /* value is not a number */
+    firstStageErr_define_value_nan, /* byte is not a number */
     
     /* label errors */
     firstStageErr_label_invalid_name,   /* invalid label name */
@@ -75,12 +77,12 @@ enum firstStageErr {
     firstStageErr_operation_invalid_addr_method,    /* invalid addressing method */
     firstStageErr_operation_invalid_operand,    /* operand expected for operation */
     firstStageErr_operation_expected_comma, /* expected comma to seperate operands */
-    firstStageErr_operation_extra_chars,    /* extra characters at the end of the line */
     firstStageErr_operation_immediate_oor,  /* immediate operand was out of range */
-    firstStageErr_operation_index_oor   /* constant index was out of range */
+    firstStageErr_operation_index_oor,  /* constant index was out of range */
+    firstStageErr_operation_too_many_operands   /* too many operands for an operation */
 };
 
-int assemblerFirstStage(char fileName[], int **data, Symbol **symbols);
+int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter);
 int validSymbolName(char *start, char *end);
 void freeSymbolsList(Symbol *head);
 

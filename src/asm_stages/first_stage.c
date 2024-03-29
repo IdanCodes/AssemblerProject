@@ -31,14 +31,13 @@ static void addSymToList(Symbol **head, Symbol *symbol);
 /* DOCUMENT */
 /* fileName is the file's name without the extension */
 /* returns 1 if there was no error, 0 if there was one */
-int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
+int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
-    int dataCounter, instructionCounter;
-    char sourceFileName[FILENAME_MAX], binFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
+    char sourceFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
     char line[MAXLINE + 1]; /* account for '\0' */
     int len, wordIndex, i, hasErr;
-    FILE *sourcef, *binf;
+    FILE *sourcef;
     Symbol *labelSymbol, *curr;
     Operation operation;
     Byte firstWord, words[NUM_MAX_EXTRA_WORDS], tempByte;
@@ -47,10 +46,8 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
     
     /* -- open files -- */
     sprintf(sourceFileName, "%s.%s", fileName, PRE_ASSEMBLED_FILE_EXTENSION);
-    sprintf(binFileName, "%s.%s", fileName, BINARY_FILE_EXTENSION);
     
     openFile(sourceFileName, "r", &sourcef);
-    openFile(binFileName, "w", &binf);
     
     
     /* -- main loop -- */
@@ -58,12 +55,13 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
     if (*data == NULL)
         logInsuffMemErr("allocating data for first stage");
     
-    instructionCounter = 0;
-    dataCounter = 0;
+    *instructionCounter = 0;
+    *dataCounter = 0;
     sourceLine = 0;
     labelSymbol = NULL;
     *symbols = NULL;
     hasErr = 0;
+    *bytes = NULL;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine += skippedLines;
         /* if the previous symbol wasn't used, free it */
@@ -104,7 +102,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
         /* storage instruction? */
         /* .data */
         if (tokcmp(token, KEYWORD_DATA_DEC) == 0) {
-            if ((err = fetchData(token, &dataCounter, symbols, data, labelSymbol)) != firstStageErr_no_err) {
+            if ((err = fetchData(token, dataCounter, symbols, data, labelSymbol)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
                 hasErr = 1;
             }
@@ -113,7 +111,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
         
         /* .string */
         if (tokcmp(token, KEYWORD_STRING_DEC) == 0) {
-            if ((err = fetchString(token, &dataCounter, symbols, data, labelSymbol)) != firstStageErr_no_err) {
+            if ((err = fetchString(token, dataCounter, symbols, data, labelSymbol)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
                 hasErr = 1;
             }
@@ -157,7 +155,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
 
         /* add the symbol to the symbols list */
         if (labelSymbol != NULL) {
-            labelSymbol->value = instructionCounter;
+            labelSymbol->value = *instructionCounter + INSTRUCTION_COUNTER_OFFSET;
             labelSymbol->flag = SYMBOL_FLAG_CODE;
             addSymToList(symbols, labelSymbol);
         }
@@ -177,18 +175,12 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
             bytesOrGate(words[SOURCE_OPERAND_INDEX], words[DEST_OPERAND_INDEX], &words[SOURCE_OPERAND_INDEX]);
             wordIndex--;    /* only has one extra word */
         }
-        instructionCounter += wordIndex + 1;
+        *instructionCounter += wordIndex + 1;
         
         /* write instructions to file */
-        fprintf(binf, "%d ", instructionCounter + INSTRUCTION_COUNTER_OFFSET - wordIndex - 1);
-        printByteToFile(firstWord, binf);
-        for (i = 0; i < wordIndex; i++) {
-            fprintf(binf, "%d ", instructionCounter - (wordIndex - i) + INSTRUCTION_COUNTER_OFFSET);
-            if (words[i].hasValue)
-                printByteToFile(words[i], binf);
-            else
-                fprintf(binf, "?\n");
-        }
+        addByteNodeToList(bytes, copyByte(firstWord));
+        for (i = 0; i < wordIndex; i++)
+            addByteNodeToList(bytes, copyByte(words[i]));
     }
     
     /* write data to file (and add IC + 100 to their values) */
@@ -196,12 +188,10 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
         if ((curr->flag & SYMBOL_FLAG_DATA) == 0)
             continue;
 
-        curr->value += instructionCounter + INSTRUCTION_COUNTER_OFFSET;
+        curr->value += *instructionCounter + INSTRUCTION_COUNTER_OFFSET;
         for (i = 0; i < curr->length; i++) {
-            if (!numberToByte((*data)[curr->value + i - instructionCounter - INSTRUCTION_COUNTER_OFFSET], &tempByte))
-                logErr("OUT OF RANGE\n");   /* TODO: print an error for this */
-            fprintf(binf, "%d ", curr->value + i);
-            printByteToFile(tempByte, binf);
+            numberToByte((*data)[curr->value + i - *instructionCounter - INSTRUCTION_COUNTER_OFFSET], &tempByte);
+            addByteNodeToList(bytes, copyByte(tempByte));
         }
     }
 
@@ -239,7 +229,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "equal sign expeceted";
             
         case firstStageErr_define_value_expected:
-            return "constant value expected";
+            return "constant byte expected";
             
         case firstStageErr_define_invalid_name:
             return "invalid name for a constant";
@@ -251,7 +241,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "the constant's name is already used";
             
         case firstStageErr_define_value_nan:
-            return "value is not a number";
+            return "byte is not a number";
         
             
         /* -- label -- */
@@ -342,22 +332,22 @@ static char *getErrMessage(enum firstStageErr err) {
             return "operand has an invalid label name";
         
         case firstStageErr_operation_invalid_addr_method:
-            return "addressing method does not match operation";
+            return "addressing methods don't match operation";
         
         case firstStageErr_operation_invalid_operand:
             return "illegal operand";
         
         case firstStageErr_operation_expected_comma:
             return "comma expected to seperate operands";
-        
-        case firstStageErr_operation_extra_chars:
-            return "extra characters at end of line";
             
         case firstStageErr_operation_immediate_oor:
             return "immediate operand is out of range"; /* TODO: specify range, maybe add more arguments for errors to have more detail */
             
         case firstStageErr_operation_index_oor:
             return "index is out of range";
+            
+        case firstStageErr_operation_too_many_operands:
+            return "too many operands";
             
         default:
             return "UNDEFINED ERROR";
@@ -646,15 +636,6 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
         return firstStageErr_extern_saved_keyword;
     }
 
-    if (getSymbolByName(token, symbols, &tempSym)) {
-        if (tempSym->flag != SYMBOL_FLAG_EXTERN) {
-            *(tokEnd + 1) = temp;
-            return firstStageErr_extern_label_exists;
-        }
-        else
-            err = firstStageErr_extern_exists;
-    }
-
     *(tokEnd + 1) = temp;
 
     tempSym = allocSymbol(token, tokEnd + 1);
@@ -720,11 +701,15 @@ static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *
 }
 
 static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]) {
-    int operandIndex, num;
+    int operandIndex, num, numOps;
     char temp, *tokEnd, *sqrBracksOpen, *sqrBracksClose, *indexStart, *indexEnd;
     
     *wordIndex = 0;
-    for (operandIndex = 0, token = getNextToken(token); operandIndex < NUM_OPERANDS; operandIndex++) {
+    numOps = getOperandCount(operation);
+    for (operandIndex = 0, token = getNextToken(token); *token != '\0'; operandIndex++) {
+        if (operandIndex > numOps)
+            return firstStageErr_operation_too_many_operands;
+        
         operandAddrs[operandIndex] = 0;
         if (!operationHasOperand(operation, operandIndex))
             continue;   /* the operation doesn't accept this operand */
@@ -755,8 +740,10 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
         temp = *tokEnd;
         *tokEnd = '\0';
         if (isRegisterName(token, &num)) {
-            if (!validAddressingMethod(operation, operandIndex, ADDR_REGISTER))
+            if (!validAddressingMethod(operation, operandIndex, ADDR_REGISTER)) {
+                *tokEnd = temp;
                 return firstStageErr_operation_invalid_addr_method;
+            }
             
             operandAddrs[operandIndex] = ADDR_REGISTER;
             writeRegisterToByte(&words[(*wordIndex)++], num, operandIndex);
@@ -819,15 +806,19 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
         if (*tokEnd != '\0' && *tokEnd != ',')
             return firstStageErr_operation_expected_comma;
 
-        if (*tokEnd != '\0')
+        if (*tokEnd != '\0') {
             token = getStart(tokEnd + 1);
+            if (*token == '\0' && *tokEnd == ',')
+                return firstStageErr_operation_expected_operand;
+        }
         else
             token = tokEnd;
     }
 
     /* check for extra text following the operands */
-    if (*token != '\0')
-        return firstStageErr_operation_extra_chars;
+    /* TODO: remove extra chars err */
+    if (operandIndex < numOps)
+        return firstStageErr_operation_expected_operand;
     
     return firstStageErr_no_err;
 }

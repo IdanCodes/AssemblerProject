@@ -10,10 +10,10 @@
 #define FILENAME "test"
 
 int main(void) {
-    char binFileName[FILENAME_MAX]/*, objFileName[FILENAME_MAX]*/;
     int *data;
     Symbol *symbols;
-    int hasErr;
+    ByteNode *bytes;
+    int hasErr, i, instructionCounter, dataCounter;
     
     hasErr = !preAssemble(FILENAME);
     
@@ -21,18 +21,34 @@ int main(void) {
         logInfo("Encounterd an error in pre-assembler.\n");
         return 1;
     }
-
-    sprintf(binFileName, "%s.%s", FILENAME, BINARY_FILE_EXTENSION);
     
-    hasErr = assemblerFirstStage(FILENAME, &data, &symbols);
+    hasErr = assemblerFirstStage(FILENAME, &data, &symbols, &bytes, &instructionCounter, &dataCounter);
     /*hasErr = hasErr || (assemblerSecondStage(FILENAME, &data, &symbols));*/
-
+    
     if (hasErr)
         logInfo("The assembler encountered an error.\n");
+    else {
+        logInfo("Instructions:\n");
+        for (i = 0; i < instructionCounter; i++) {
+            printf("%d ", i + INSTRUCTION_COUNTER_OFFSET);
+            if (bytes->byte.hasValue)
+                printByteToFile(bytes->byte, stdout);
+            else
+                printf("?\n");
+            bytes = bytes->next;
+        }
+        
+        logInfo("Data:\n");
+        for (i = 0; i < dataCounter; i++) {
+            printf("%d ", instructionCounter + i + INSTRUCTION_COUNTER_OFFSET);
+            printByteToFile(bytes->byte, stdout);
+            bytes = bytes->next;
+        }
+    }
     
     free(data);
     freeSymbolsList(symbols);
-    /*deleteFile(binFileName);*/
+    freeByteList(bytes);
     
     return 0;
 }
