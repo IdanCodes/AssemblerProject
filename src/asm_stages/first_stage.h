@@ -3,7 +3,7 @@
 
 /* make a seperate file to store keyword definitions */
 #define LABEL_MAX_LENGTH  31
-#define DATA_COUNTER_OFFSET  100
+#define INSTRUCTION_COUNTER_OFFSET  100
 
 #define SYMBOL_FLAG_MDEFINE 1
 #define SYMBOL_FLAG_CODE    2
@@ -44,6 +44,7 @@ enum firstStageErr {
     firstStageErr_data_comma_expected,  /* comma expected between arguments */
     firstStageErr_data_const_not_found, /* constant referenced was not found */
     firstStageErr_data_argument_expected,   /* argument expected in data */
+    firstStageErr_data_oor, /* the data argument was out of range for a byte */
     
     /* .string errors */
     firstStageErr_string_expected_quotes,   /* quotes missing after .string */
@@ -53,17 +54,15 @@ enum firstStageErr {
     /* .extern errors */
     firstStageErr_extern_invalid_lbl_name,  /* the .extern parameter is not a valid name for a label */ 
     firstStageErr_extern_extra_chars,   /* extra characters at the end of an extern instruction */
-    firstStageErr_extern_def_label_same_name,   /* defining label with the same name as the .extern parameter */
     firstStageErr_extern_label_exists,  /* the label is already defined in the file */
     firstStageErr_extern_saved_keyword, /* extern label is a saved keyword */
-    firstStageErr_extern_define_label,  /* a label is defined in the beginning of an extern instruction */
-    firstStageErr_extern_exists, /* this label was already declared as extern */
+    firstStageErr_extern_define_label,  /* a label is defined in the beginning of an extern instruction (warning) */
+    firstStageErr_extern_exists, /* this label was already declared as extern (warning) */
     
     /* .entry errors */
     firstStageErr_entry_invalid_lbl_name,   /* the .entry parameter is not a valid name for a label */
     firstStageErr_entry_extra_chars,    /* extra characters at the end of an entry instruction */
-    firstStageErr_entry_def_label_same_name,    /* defining label with the same name as the .entry parameter */
-    firstStageErr_entry_define_label,   /* a label is defined in the beginning of an entry instruction */
+    firstStageErr_entry_define_label,   /* a label is defined in the beginning of an entry instruction (warning) */
     
     /* operation errors */
     firstStageErr_operation_not_found,  /* invalid operator name */
@@ -83,5 +82,6 @@ enum firstStageErr {
 
 int assemblerFirstStage(char fileName[], int **data, Symbol **symbols);
 int validSymbolName(char *start, char *end);
+void freeSymbolsList(Symbol *head);
 
 #endif /* FIRST_STAGE */

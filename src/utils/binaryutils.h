@@ -25,6 +25,7 @@ typedef struct {
     char bits[NUM_BITS];
 } Byte;
 
+int inByteRange(int num);
 int numberToByte(int number, Byte *pbyte);
 int getFirstWordBin(char opcode, char sourceAddr, char destAddr, Byte *pbyte);
 int writeImmediateToByte(Byte *pbyte, int number);

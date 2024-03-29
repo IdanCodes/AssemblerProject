@@ -6,13 +6,17 @@ int abs(int x); /* from <math.h> */
 static char getFlippedBit(char b);
 static void flipByte(Byte *pbyte);
 
+int inByteRange(int num) {
+    return num >= MIN_NUMBER && num <= MAX_NUMBER;
+}
+
 /* returns whether the conversion was successful
  * - assuming pbyte isn't NULL */
 int numberToByte(int number, Byte *pbyte) {
     const int firstBitValue = 1;    /* value of LSB (least significant bit) */
     int bitValue, bitIndex, sign, temp, i;
     
-    if (number < MIN_NUMBER || number > MAX_NUMBER)
+    if (!inByteRange(number))
         return 0;
     
     sign = number < 0 ? -1 : 1;

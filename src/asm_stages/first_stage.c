@@ -27,7 +27,6 @@ static enum firstStageErr validateEntry(char *token, Symbol *lblSym);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
 static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
 static void addSymToList(Symbol **head, Symbol *symbol);
-static void freeSymbolsList(Symbol *head);
 
 /* DOCUMENT */
 /* fileName is the file's name without the extension */
@@ -48,7 +47,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
     
     /* -- open files -- */
     sprintf(sourceFileName, "%s.%s", fileName, PRE_ASSEMBLED_FILE_EXTENSION);
-    sprintf(binFileName, "%s.%s", fileName, BINARY_FILE_EXTENSION); 
+    sprintf(binFileName, "%s.%s", fileName, BINARY_FILE_EXTENSION);
     
     openFile(sourceFileName, "r", &sourcef);
     openFile(binFileName, "w", &binf);
@@ -180,10 +179,11 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
         }
         instructionCounter += wordIndex + 1;
         
-        fprintf(binf, "%d ", instructionCounter + 100 - wordIndex - 1);
+        /* write instructions to file */
+        fprintf(binf, "%d ", instructionCounter + INSTRUCTION_COUNTER_OFFSET - wordIndex - 1);
         printByteToFile(firstWord, binf);
         for (i = 0; i < wordIndex; i++) {
-            fprintf(binf, "%d ", instructionCounter - (wordIndex - i) + 100);
+            fprintf(binf, "%d ", instructionCounter - (wordIndex - i) + INSTRUCTION_COUNTER_OFFSET);
             if (words[i].hasValue)
                 printByteToFile(words[i], binf);
             else
@@ -191,14 +191,16 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
         }
     }
     
+    /* write data to file (and add IC + 100 to their values) */
     for (curr = *symbols; curr != NULL; curr = curr->next) {
         if ((curr->flag & SYMBOL_FLAG_DATA) == 0)
             continue;
 
+        curr->value += instructionCounter + INSTRUCTION_COUNTER_OFFSET;
         for (i = 0; i < curr->length; i++) {
-            fprintf(binf, "%d ", instructionCounter + 100 + curr->value + i);
-            if (!numberToByte((*data)[curr->value + i], &tempByte))
+            if (!numberToByte((*data)[curr->value + i - instructionCounter - INSTRUCTION_COUNTER_OFFSET], &tempByte))
                 logErr("OUT OF RANGE\n");   /* TODO: print an error for this */
+            fprintf(binf, "%d ", curr->value + i);
             printByteToFile(tempByte, binf);
         }
     }
@@ -210,14 +212,8 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols) {
         free(labelSymbol->name);
         free(labelSymbol);
     }
-
-    if (hasErr) {
-        free(*data);
-        freeSymbolsList(*symbols);
-        deleteFile(binFileName);
-    }
     
-    return !hasErr;
+    return hasErr;
 }
 
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName) {
@@ -288,6 +284,9 @@ static char *getErrMessage(enum firstStageErr err) {
         case firstStageErr_data_argument_expected:
             return "argument expected";
             
+        case firstStageErr_data_oor:
+            return "data argument out of range for a byte"; /* TODO: specify real range/number that was out of range */
+            
             
         /* -- .string -- */
         case firstStageErr_string_expected_quotes:
@@ -305,9 +304,6 @@ static char *getErrMessage(enum firstStageErr err) {
         case firstStageErr_extern_extra_chars:
             return "extra characters following .extern parameter";
             
-        case firstStageErr_extern_def_label_same_name:
-            return "label and .extern parameter have the same name";
-            
         case firstStageErr_extern_label_exists:
             return "a label with this name already exists in this file";
             
@@ -321,9 +317,6 @@ static char *getErrMessage(enum firstStageErr err) {
             
         case firstStageErr_entry_extra_chars:
             return "extra characters following .entry parameter";
-            
-        case firstStageErr_entry_def_label_same_name:
-            return "label and .entry parameter have the same name";
             
             
         /* -- operations -- */
@@ -556,6 +549,9 @@ static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *s
         if ((err = fetchNumber(token, valEnd, &num, symbols)) != firstStageErr_no_err)
             return err;
         
+        if (!inByteRange(num))
+            return firstStageErr_data_oor;
+        
         token = next;
         
         /* store the number into memory and increment data counter */
@@ -638,17 +634,12 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
 
     if (*getNextToken(token) != '\0')
         return firstStageErr_extern_extra_chars;
-
+    
+    if (lblSym != NULL)
+        err = firstStageErr_extern_define_label;
+    
     temp = *(tokEnd + 1);
     *(tokEnd + 1) = '\0';
-
-    if (lblSym != NULL) {
-        if (tokcmp(lblSym->name, token) == 0) {
-            *(tokEnd + 1) = temp;
-            return firstStageErr_extern_def_label_same_name;
-        }
-        err = firstStageErr_extern_define_label;
-    }
 
     if (isSavedKeyword(token)) {
         *(tokEnd + 1) = temp;
@@ -674,30 +665,19 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
 }
 
 static enum firstStageErr validateEntry(char *token, Symbol *lblSym) {
-    char *tokEnd, temp;
     enum firstStageErr err;
     
     err = firstStageErr_no_err;
     
     token = getNextToken(token);
-    if (!validSymbolName(token, tokEnd = getTokEnd(token)))
+    if (!validSymbolName(token, getTokEnd(token)))
         return firstStageErr_entry_invalid_lbl_name;
 
     if (*getNextToken(token) != '\0')
         return firstStageErr_entry_extra_chars;
     
-    temp = *(tokEnd + 1);
-    *(tokEnd + 1) = '\0';
-
-    if (lblSym != NULL) {
-        if (tokcmp(lblSym->name, token) == 0) {
-            *(tokEnd + 1) = temp;
-            return firstStageErr_entry_def_label_same_name;
-        }
+    if (lblSym != NULL)
         err = firstStageErr_entry_define_label;
-    }
-    
-    *(tokEnd + 1) = temp;
     
     return err;
 }
@@ -774,7 +754,6 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
         /* register addressing? */
         temp = *tokEnd;
         *tokEnd = '\0';
-        /* TODO: should the assembler treat something like "r10" as a label or print an error for an out of range register index? (asked in forums) */
         if (isRegisterName(token, &num)) {
             if (!validAddressingMethod(operation, operandIndex, ADDR_REGISTER))
                 return firstStageErr_operation_invalid_addr_method;
@@ -868,7 +847,7 @@ static void addSymToList(Symbol **head, Symbol *symbol) {
     temp->next = symbol;
 }
 
-static void freeSymbolsList(Symbol *head) {
+void freeSymbolsList(Symbol *head) {
     if (head == NULL)
         return;
 

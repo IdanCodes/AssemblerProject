@@ -3,6 +3,7 @@
 #include "strutils.h"
 
 /* DOCUMENT */
+/* NOTE: a register like r10 will NOT be considered a register with an invalid register "index". */
 int isRegisterName(char *keyword, int *regIndex) {
     char *tmpPrefix = KEYWORD_REGISTER_PREFIX;
     

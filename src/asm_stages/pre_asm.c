@@ -7,18 +7,19 @@
 #include "../utils/charutils.h"
 #include "../utils/keywords.h"
 
+static void printPreAsmErr(enum preAssembleErr err, unsigned int sourceLine, char *sourceFileName);
+
 /* DOCUMENT preAssemble */
 /* fileName is the name of the file without the added extension */
-/* returns the error (or preAssembleErr_no_err if there wasn't one) */
+/* returns 1 if there were no erros, else returns 0 */
 enum preAssembleErr preAssemble(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine;
-    int skippedLines, len, readingMcr;
+    int skippedLines, len, readingMcr, hasErr;
     char line[MAXLINE + 1]; /* account for '\0' */
     char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token;
     FILE *sourcef, *outf;
     Macro *head, *tail, *mcr;
-    enum preAssembleErr preAsmErr;
     
     /* -- open source and output files -- */
     sprintf(sourceFileName, "%s.%s", fileName, SOURCE_FILE_EXTENSION);
@@ -31,8 +32,8 @@ enum preAssembleErr preAssemble(char fileName[]) {
     /* -- main loop -- */
     sourceLine = 0;
     head = NULL;
-    preAsmErr = preAssembleErr_no_err;
     readingMcr = 0;
+    hasErr = 0;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine += skippedLines;
         
@@ -43,13 +44,19 @@ enum preAssembleErr preAssemble(char fileName[]) {
 
                 /* error handling */
                 if (*getNextToken(token) != '\0') {
-                    preAsmErr = preAssembleErr_unexpected_chars_end;
+                    printPreAsmErr(preAssembleErr_unexpected_chars_end, sourceLine, sourceFileName);
+                    hasErr = 1;
                     break;
                 }
 
-                tail->endLine = sourceLine - 1; /* tail's end because there can't be nested macros */
+                tail->endLine = sourceLine - 1; /* tail's the end because there can't be nested macros */
             }
             continue; /* skip print */
+        }
+        else if (tokcmp(token, KEYWORD_MCR_END) == 0) {
+            printPreAsmErr(preAssembleErr_unexpected_end, sourceLine, sourceFileName);
+            hasErr = 1;
+            break;
         }
 
         if (tokcmp(token, KEYWORD_MCR_DEC) == 0) {
@@ -57,22 +64,26 @@ enum preAssembleErr preAssemble(char fileName[]) {
 
             /* error handling */
             if (*(token = getNextToken(token)) == '\0') {
-                preAsmErr = preAssembleErr_mcr_expected;
+                printPreAsmErr(preAssembleErr_mcr_expected, sourceLine, sourceFileName);
+                hasErr = 1;
                 break;
             }
             
             if (*getNextToken(token) != '\0') {
-                preAsmErr = preAssembleErr_unexpected_chars_dec;
+                printPreAsmErr(preAssembleErr_unexpected_chars_dec, sourceLine, sourceFileName);
+                hasErr = 1;
                 break;
             }
             
             if (getMacroWithName(token, head) != NULL) {
-                preAsmErr = preAssembleErr_macro_exists;
+                printPreAsmErr(preAssembleErr_macro_exists, sourceLine, sourceFileName);
+                hasErr = 1;
                 break;
             }
             
             if (isSavedKeyword(token)) {
-                preAsmErr = preAssembleErr_macro_saved_name;
+                printPreAsmErr(preAssembleErr_macro_saved_name, sourceLine, sourceFileName);
+                hasErr = 1;
                 break;
             }
 
@@ -88,7 +99,8 @@ enum preAssembleErr preAssemble(char fileName[]) {
 
         if ((mcr = getMacroWithName(token, head)) != NULL) {
             if (*getNextToken(token) != '\0') {
-                preAsmErr = preAssembleErr_unexpected_chars_ref;
+                printPreAsmErr(preAssembleErr_unexpected_chars_call, sourceLine, sourceFileName);
+                hasErr = 1;
                 break;
             }
             
@@ -109,12 +121,14 @@ enum preAssembleErr preAssemble(char fileName[]) {
         head = head->next;
     }
 
-    if (preAsmErr != preAssembleErr_no_err) {
-        logErr("%s (line %u in file '%s').\n", preAsmErrMessage(preAsmErr), sourceLine, sourceFileName);
+    if (hasErr)
         deleteFile(outFileName);
-    }
     
-    return preAsmErr;
+    return !hasErr;
+}
+
+static void printPreAsmErr(enum preAssembleErr err, unsigned int sourceLine, char *sourceFileName) {
+    logErr("%s (line %u in file '%s').\n", preAsmErrMessage(err), sourceLine, sourceFileName);
 }
 
 /**
@@ -126,19 +140,27 @@ char *preAsmErrMessage(enum preAssembleErr err) {
     switch (err) {
         case preAssembleErr_mcr_expected:
             return "Macro name expected";
+            
         case preAssembleErr_unexpected_chars_dec:
             return "Unexpected characters after macro declaration";
+            
         case preAssembleErr_unexpected_chars_end:
             return "Unexpected characters after macro end";
-        case preAssembleErr_unexpected_chars_ref:
+            
+        case preAssembleErr_unexpected_chars_call:
             return "Unexpected characters after macro call";
+            
         case preAssembleErr_macro_exists:
             return "Macro name already used";
+            
         case preAssembleErr_macro_saved_name:
             return "Macro name is a saved keyword";
             
+        case preAssembleErr_unexpected_end:
+            return "Macro end is outside of a macro definition";
+            
         default:
-            return "";
+            return "UNDEFINED ERROR";
     }
 }
 
@@ -206,9 +228,10 @@ void expandMacro(Macro *mcr, FILE *destf, char *sourcefileName) {
             terminalError(1, "Error expanding macro '%s' - reached end of file (in file '%s').\n", mcr->name, sourcefileName);
     }
     
+    sourceLine += getNextLine(sourcef, line, MAXLINE, &len);
     for (; sourceLine < mcr->endLine;) {
-        sourceLine += getNextLine(sourcef, line, MAXLINE, &len);
         fprintf(destf, "%s\n", line);
+        sourceLine += getNextLine(sourcef, line, MAXLINE, &len);
     }
     
     fclose(sourcef);
