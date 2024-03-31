@@ -22,7 +22,7 @@ static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *s
 static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
 static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter, int **data);
 static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
-static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblSym);
+static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lblSym);
 static enum firstStageErr validateEntry(char *token, Symbol *lblSym);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
 static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
@@ -120,7 +120,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
         
         /* .extern instruction? */
         if (tokcmp(token, KEYWORD_EXTERN_DEC) == 0) {
-            if ((err = fetchExtern(token, *symbols, labelSymbol)) != firstStageErr_no_err) {
+            if ((err = fetchExtern(token, symbols, labelSymbol)) != firstStageErr_no_err) {
                 if (err == firstStageErr_extern_exists)
                     logWarn("label was already declared as extern (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
                 else if (err == firstStageErr_extern_define_label)
@@ -241,7 +241,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "the constant's name is already used";
             
         case firstStageErr_define_value_nan:
-            return "byte is not a number";
+            return "constant value must be an immediate number";
         
             
         /* -- label -- */
@@ -255,7 +255,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "can't use a saved keyword as a label's name";
             
         case firstStageErr_label_name_taken:
-            return "a label with this name already exists";
+            return "a symbol with this name already exists";
             
         case firstStageErr_label_empty_line:
             return "can't define a label on an empty line";
@@ -295,7 +295,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "extra characters following .extern parameter";
             
         case firstStageErr_extern_label_exists:
-            return "a label with this name already exists in this file";
+            return "a symbol with this name already exists in this file";
             
         case firstStageErr_extern_saved_keyword:
             return "can't used .extern on a saved keyword";
@@ -611,7 +611,7 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     return firstStageErr_no_err;
 }
 
-static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblSym) {
+static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lblSym) {
     char *tokEnd, temp;
     Symbol *tempSym;
     enum firstStageErr err;
@@ -635,13 +635,22 @@ static enum firstStageErr fetchExtern(char *token, Symbol *symbols, Symbol *lblS
         *(tokEnd + 1) = temp;
         return firstStageErr_extern_saved_keyword;
     }
+    
+    if (getSymbolByName(token, *symbols, &tempSym)) {
+        if ((tempSym->flag & SYMBOL_FLAG_EXTERN) == 0) {
+            *(tokEnd + 1) = temp;
+            return firstStageErr_extern_label_exists;
+        }
+        else
+            err = firstStageErr_extern_exists;
+    }
 
     *(tokEnd + 1) = temp;
 
     tempSym = allocSymbol(token, tokEnd + 1);
     tempSym->flag = SYMBOL_FLAG_EXTERN;
 
-    addSymToList(&symbols, tempSym);
+    addSymToList(symbols, tempSym);
     return err;
 }
 
@@ -816,7 +825,6 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
     }
 
     /* check for extra text following the operands */
-    /* TODO: remove extra chars err */
     if (operandIndex < numOps)
         return firstStageErr_operation_expected_operand;
     

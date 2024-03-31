@@ -11,7 +11,7 @@
 
 ;prn ENDSTR
 
-;.define index = 1
+;.define index = 1ג
 ;ARR: .data 2, 3, index
 ;mov r5, r2
 
@@ -31,5 +31,6 @@
 ;LIST:   .data 611, -9, len
 ;K:      .data   22
 
-stop:        hlt
-.extern stop
+WA:        hlt
+MEOW: mov #3, r1
+prn #5
