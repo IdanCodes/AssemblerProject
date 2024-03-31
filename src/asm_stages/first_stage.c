@@ -435,7 +435,6 @@ static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbol
     int i;
     char *labelName;
     
-    /* TODO: store the label in the symbols list even if the rest of the line throws an error */
     if (!validSymbolName(*token, tokEnd - 1))
         return firstStageErr_label_invalid_name;
 
@@ -730,8 +729,7 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
         tokEnd = getEndOfOperand(token);
         if (*token == IMMEDIATE_OPERAND_PREFIX_CHAR) {
             token++;
-
-            /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
+            
             if (fetchNumber(token, tokEnd, &num, symbols) != firstStageErr_no_err)
                 return firstStageErr_operation_invalid_immediate;
 
@@ -780,8 +778,7 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
 
             if (getTokEnd(indexStart) < indexEnd)   /* the index is not a single token */
                 return firstStageErr_operation_invalid_index;
-
-            /* TODO: maybe elaborate on the error with the error returned from fetchNumber */
+                
             if (fetchNumber(indexStart, indexEnd + 1, &num, symbols) != firstStageErr_no_err)
                 return firstStageErr_operation_invalid_index;
 
@@ -798,11 +795,8 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
         }
         else if (validSymbolName(token, tokEnd)) {
             /* the operand must be a direct (label) addressing */
-            if (!validAddressingMethod(operation, operandIndex, ADDR_DIRECT)) {
-                /* TODO: remove this log */
-                logInfo("Operation %s does not accept direct addressing as operand %d\n", operation.opName, operandIndex);
+            if (!validAddressingMethod(operation, operandIndex, ADDR_DIRECT))
                 return firstStageErr_operation_invalid_addr_method;
-            }
             
             operandAddrs[operandIndex] = ADDR_DIRECT;
             words[(*wordIndex)++].hasValue = 0;
