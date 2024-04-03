@@ -1,4 +1,5 @@
 #include "second_stage.h"
+#include "first_stage.h"
 #include "../utils/inpututils.h"
 #include "../utils/fileutils.h"
 #include "../utils/strutils.h"
@@ -65,9 +66,11 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
                 logWarn("label '%s' was already declared as entry (in file \"%s\", line %u)\n", token, sourceFileName, sourceLine);
                 continue;   /* skip to the next line */
             }
-            
+
+            /* TODO: remove this log */
             logInfo("Entry '%s' in line %u in file '%s'\n", token, sourceLine, sourceFileName);
             tempSym->flag |= SYMBOL_FLAG_ENTRY; /* declare symbol as entry */
+            fprintf(entf, "%d %s\n", tempSym->value, token);
             continue;
         }
     }

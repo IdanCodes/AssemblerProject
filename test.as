@@ -31,10 +31,7 @@
 ;LIST:   .data 611, -9, len
 ;K:      .data   22
 
-WA:        hlt
-MEOW: mov #3, r1
-MEOW: .entry HI
-prn #2
-prn #5
-MEOW: .entry HI
-HI: prn #2
+hlt
+HI: hlt
+hlt
+.entry HI
