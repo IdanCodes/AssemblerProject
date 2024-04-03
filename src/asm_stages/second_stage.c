@@ -6,13 +6,17 @@
 #include "../utils/keywords.h"
 #include "../utils/logger.h"
 
+static void printSecondStageErr(enum secondStageErr err, unsigned int lineNumber, char *fileName);
+static char *getErrMsg(enum secondStageErr err);
+
 int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *bytes, int numInstructions, int dataCounter) {
     char *token, *tokEnd;
     char sourceFileName[FILENAME_MAX], objFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     char line[MAXLINE + 1];
     unsigned int sourceLine, skippedLines;
-    int instructionCounter, len;
+    int instructionCounter, len, hasErr;
     FILE *sourcef, *objf, *entf, *extf;
+    Symbol *tempSym;
     
     
     /* -- open files -- */
@@ -28,6 +32,7 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
     
     sourceLine = 0;
     instructionCounter = 0;
+    hasErr = 0;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine += skippedLines;
         
@@ -48,11 +53,44 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
         if (tokcmp(token, KEYWORD_ENTRY_DEC) == 0) {
             /* TODO: write to entry file */
             token = getNextToken(token);
-            *(getTokEnd(token) + 1) = '\0';
+            *(getTokEnd(token) + 1) = '\0'; /* this line will not be read anymore - no need to save the character's value */
+            if (!getSymbolByName(token, symbols, &tempSym)) {
+                printSecondStageErr(secondStageErr_entry_undefined, sourceLine, sourceFileName);
+                hasErr = 1;
+                continue;
+            }
+            
+            /* was this symbol already declared as entry? */
+            if ((tempSym->flag & SYMBOL_FLAG_ENTRY) != 0) {
+                logWarn("label '%s' was already declared as entry (in file \"%s\", line %u)\n", token, sourceFileName, sourceLine);
+                continue;   /* skip to the next line */
+            }
+            
             logInfo("Entry '%s' in line %u in file '%s'\n", token, sourceLine, sourceFileName);
+            tempSym->flag |= SYMBOL_FLAG_ENTRY; /* declare symbol as entry */
             continue;
         }
     }
     
-    return 0;
+    return hasErr;
+}
+
+static void printSecondStageErr(enum secondStageErr err, unsigned int lineNumber, char *fileName) {
+    char *message;
+
+    if (err == secondStageErr_no_err)
+        return;
+
+    message = getErrMsg(err);
+    logErr("file \"%s\" line %u - %s\n", fileName, lineNumber, message);
+}
+
+static char *getErrMsg(enum secondStageErr err) {
+    switch (err) {
+        case secondStageErr_entry_undefined:
+            return "undefined label";
+        
+        default:
+            return "UNDEFINED ERROR";
+    }
 }

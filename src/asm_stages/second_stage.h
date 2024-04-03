@@ -5,7 +5,10 @@
 #include "../structures/bytelist.h"
 
 enum secondStageErr {
-    secondStageErr_no_err
+    secondStageErr_no_err,  /* no error */
+    
+    /* .entry */
+    secondStageErr_entry_undefined  /* .entry parameter's symbol was not found */
 };
 
 int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *bytes, int numInstructions, int dataCounter);
