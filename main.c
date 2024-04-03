@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include "src/asm_stages/pre_asm.h"
 #include "src/asm_stages/first_stage.h"
+#include "src/asm_stages/second_stage.h"
 #include "src/utils/binaryutils.h"
 #include "src/utils/fileutils.h"
 #include "src/utils/logger.h"
+#include "src/structures/symboltype.h"
 
 /* TODO: implement file names from command line input */
 #define FILENAME "test"
@@ -23,7 +25,7 @@ int main(void) {
     }
     
     hasErr = assemblerFirstStage(FILENAME, &data, &symbols, &bytes, &instructionCounter, &dataCounter);
-    /*hasErr = hasErr || (assemblerSecondStage(FILENAME, &data, &symbols));*/
+    hasErr = hasErr || (assemblerSecondStage(FILENAME, data, symbols, bytes, instructionCounter, dataCounter));
     
     if (hasErr)
         logInfo("The assembler encountered an error.\n");

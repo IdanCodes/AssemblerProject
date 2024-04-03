@@ -42,5 +42,6 @@ int getOperationByName(char *name, Operation *op);
 int getOperandCount(Operation op);
 int validAddressingMethod(Operation op, int operandIndex, int addrMethod);
 int operationHasOperand(Operation op, int operandIndex);
+int getNumWords(Operation op, int sourceAddr, int destAddr);
 
 #endif /* OPERATIONS */

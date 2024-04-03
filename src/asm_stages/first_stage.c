@@ -9,14 +9,13 @@
 #include "../utils/operations.h"
 #include "../utils/binaryutils.h"
 
+/* TODO: remove pragma in all files */
+
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName);
 static char *getErrMessage(enum firstStageErr err);
-static int symbolInList(Symbol *head, char *name);
-static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol);
-static Symbol *allocSymbol(char *nameStart, char *nameEnd);
 static void registerConstant(Symbol **head, char *name, int value);
 static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int length);
-static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbols, Symbol **pLblSymbol);
+static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **pLblSymbol);
 static enum firstStageErr fetchConstant(char *line, Symbol **symbols);
 static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data);
 static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
@@ -26,7 +25,6 @@ static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lbl
 static enum firstStageErr validateEntry(char *token, Symbol *lblSym);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
 static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
-static void addSymToList(Symbol **head, Symbol *symbol);
 
 /* DOCUMENT */
 /* fileName is the file's name without the extension */
@@ -44,9 +42,8 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
     enum firstStageErr err;
     
     
-    /* -- open files -- */
+    /* -- open file -- */
     sprintf(sourceFileName, "%s.%s", fileName, PRE_ASSEMBLED_FILE_EXTENSION);
-    
     openFile(sourceFileName, "r", &sourcef);
     
     
@@ -79,7 +76,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
         /* if this is a valid (label) declaration, there must be a white character seperating the label name and the rest of the line */
         if (*(tokEnd = getTokEnd(token)) == LABEL_END_CHAR) 
         {
-            if ((err = fetchLabel(&token, tokEnd, symbols, &labelSymbol)) != firstStageErr_no_err) {
+            if ((err = fetchLabel(&token, tokEnd, &labelSymbol)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
                 hasErr = 1;
                 continue;
@@ -155,6 +152,12 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
 
         /* add the symbol to the symbols list */
         if (labelSymbol != NULL) {
+            if (symbolInList(*symbols, labelSymbol->name)) {
+                printFirstStageError(firstStageErr_label_name_taken, sourceLine, sourceFileName);
+                hasErr = 1;
+                continue;
+            }
+            
             labelSymbol->value = *instructionCounter + INSTRUCTION_COUNTER_OFFSET;
             labelSymbol->flag = SYMBOL_FLAG_CODE;
             addSymToList(symbols, labelSymbol);
@@ -354,62 +357,6 @@ static char *getErrMessage(enum firstStageErr err) {
     }
 }
 
-/**
- * Is the given string a valid name for a symbol?
- * @param start the start of the symbol name
- * @param end the end of the symbol name (first character *outside* the name)
- * @return 1 if the string is a valid name for a symbol, 0 otherwise
- */
-int validSymbolName(char *start, char *end) {
-    if (end < start || (end - start) >= LABEL_MAX_LENGTH ||  /* invalid length */
-        !isalpha(*start))    /* first character is not alphabetic */
-        return 0;
-
-    for (start++; start < end; start++) {
-        if (!isalnum(*start))
-            return 0;
-    }
-
-    return 1;
-}
-
-static int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol) {
-    while (head != NULL) {
-        if (tokcmp(head->name, name) == 0) {
-            *pSymbol = head;
-            return 1;
-        }
-        head = head->next;
-    }
-    
-    return 0;
-}
-
-static int symbolInList(Symbol *head, char *name) {
-    Symbol *tempSym;
-    return getSymbolByName(name, head, &tempSym);
-}
-
-/* nameEnd is the first character outside the name (name string is [name, end-1]) */
-static Symbol *allocSymbol(char *nameStart, char *nameEnd) {
-    Symbol *newS;
-    char temp;
-
-    newS = (Symbol *)malloc(sizeof(Symbol));
-    if (newS == NULL)
-        logInsuffMemErr("allocating symbol");
-
-    temp = *nameEnd;
-    *nameEnd = '\0';
-
-    newS->name = strdup(nameStart);
-    if (newS->name == NULL)
-        logInsuffMemErr("allocating symbol's name");
-
-    *nameEnd = temp;
-    return newS;
-}
-
 static void registerConstant(Symbol **head, char *name, int value) {
     Symbol *sym;
 
@@ -431,7 +378,7 @@ static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int len
     addSymToList(head, lblSym);
 }
 
-static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbols, Symbol **pLblSymbol) {
+static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **pLblSymbol) {
     int i;
     char *labelName;
     
@@ -451,9 +398,6 @@ static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **symbol
 
     if (isSavedKeyword(labelName))
         return firstStageErr_label_saved_keyword;
-
-    if (symbolInList(*symbols, labelName))
-        return firstStageErr_label_name_taken;
 
     *token = getNextToken(*token);
 
@@ -564,6 +508,9 @@ static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symb
     if ((err = storeDataArgs(getNextToken(token), dataCounter, *symbols, data)) != firstStageErr_no_err)
         return err;
 
+    if (symbolInList(*symbols, lblSym->name))
+        return firstStageErr_label_name_taken;
+    
     registerDataSymbol(symbols, lblSym, prevDC, *dataCounter - prevDC);
     return firstStageErr_no_err;
 }
@@ -603,6 +550,9 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     /* check for more chars in the same token and in the rest of the string */
     if (quoteEnd != getTokEnd(quoteEnd) || *getNextToken(quoteEnd) != '\0')
         return firstStageErr_string_extra_chars;
+
+    if (symbolInList(*symbols, lblSym->name))
+        return firstStageErr_label_name_taken;
     
     prevDC = *dataCounter;
     storeStringInData(quoteStart, quoteEnd, dataCounter, data);
@@ -823,28 +773,4 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
         return firstStageErr_operation_expected_operand;
     
     return firstStageErr_no_err;
-}
-
-static void addSymToList(Symbol **head, Symbol *symbol) {
-    Symbol *temp;
-    
-    if (*head == NULL) {
-        *head = symbol;
-        return;
-    }
-
-    temp = *head;
-    while (temp->next != NULL)
-        temp = temp->next;
-
-    temp->next = symbol;
-}
-
-void freeSymbolsList(Symbol *head) {
-    if (head == NULL)
-        return;
-
-    freeSymbolsList(head->next);
-    free(head->name);
-    free(head);
 }

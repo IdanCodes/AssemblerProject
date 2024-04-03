@@ -33,4 +33,7 @@
 
 WA:        hlt
 MEOW: mov #3, r1
+WA: .entry HI
+WA: .extern HI
+WA: .entry HI
 prn #5

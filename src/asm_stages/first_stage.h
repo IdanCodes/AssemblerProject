@@ -1,25 +1,13 @@
 #ifndef FIRST_STAGE
 #define FIRST_STAGE
 
-/* make a seperate file to store keyword definitions */
+/* TODO: move the Macro structure to src/structures */
+
+/* TODO: make a seperate file to store keyword definitions */
 #include "../structures/bytelist.h"
+#include "../structures/symboltype.h"
 
-#define LABEL_MAX_LENGTH  31
 #define INSTRUCTION_COUNTER_OFFSET  100
-
-#define SYMBOL_FLAG_MDEFINE 1
-#define SYMBOL_FLAG_CODE    2
-#define SYMBOL_FLAG_EXTERN  4
-#define SYMBOL_FLAG_DATA    8
-
-/* when accessing by index, check if the range of the index is bad out of bounds */
-typedef struct Symbol {
-    char *name;
-    int value;
-    int flag;
-    int length;
-    struct Symbol *next;
-} Symbol;
 
 enum firstStageErr {
     firstStageErr_no_err,   /* no error */
@@ -83,7 +71,5 @@ enum firstStageErr {
 };
 
 int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter);
-int validSymbolName(char *start, char *end);
-void freeSymbolsList(Symbol *head);
 
 #endif /* FIRST_STAGE */
