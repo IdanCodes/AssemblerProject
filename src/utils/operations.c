@@ -117,6 +117,7 @@ static Operation operations[NUM_OPERATIONS] = {
     }
 };
 
+/* compares token (not entire string) */
 int getOperationByName(char *name, Operation *op) {
     int i;
     
@@ -166,27 +167,4 @@ int operationHasOperand(Operation op, int operandIndex) {
                 ? (op.destAddrMethod[ADDR_IMMEDIATE] || op.destAddrMethod[ADDR_DIRECT]
                    || op.destAddrMethod[ADDR_CONSTANT_INDEX] || op.sourceAddrMethod[ADDR_REGISTER])
                 : 0;    /* invalid operand index */
-}
-
-/* getNumWords(Operation op, int sourceAddr, int destAddr) in operations.c - returns the number of binary words the operation takes (including first word) */
-int getNumWords(Operation op, int sourceAddr, int destAddr) {
-    int result;
-    
-    /* first word */
-    result = 1;
-    
-    if (sourceAddr == ADDR_REGISTER) {
-        result++;
-        if (destAddr == ADDR_REGISTER)
-            return result;
-    }
-    else if (sourceAddr == ADDR_IMMEDIATE || sourceAddr == ADDR_DIRECT)
-        result++;
-    else if (sourceAddr == ADDR_CONSTANT_INDEX)
-        result += 2;    /* constant index takes 2 words */ 
-        
-    if (destAddr == ADDR_IMMEDIATE || destAddr == ADDR_DIRECT || destAddr == ADDR_REGISTER)
-        result++;
-    
-    return result;
 }

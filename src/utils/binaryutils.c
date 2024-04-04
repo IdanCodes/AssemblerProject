@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <math.h>
-#include <stdlib.h>
 #include "binaryutils.h"
+#include "../structures/symboltype.h"
 #include "logger.h"
 
 int abs(int x); /* from <math.h> */
@@ -88,7 +88,7 @@ int getFirstWordBin(char opcode, char sourceAddr, char destAddr, Byte *pbyte) {
     for (; bitIndex < NUM_BITS; bitIndex++)
         pbyte->bits[bitIndex] = 0;
     
-    return 1;
+    return pbyte->hasValue = 1;
 }
 
 void clearByte(Byte *pbyte) {
@@ -158,6 +158,63 @@ void printByteToFile(Byte byte, FILE *fp) {
     for (i = NUM_BITS - 1; i >= 0; i--)
         fprintf(fp, "%d ", byte.bits[i]);
     fprintf(fp, "\n");
+}
+
+/**
+ * Shift the given byte n bits to the left
+ * @param byte the byte to shift
+ * @param n the number of bits to shift
+ */
+void shiftLeft(Byte *byte, int n) {
+    int i;
+    
+    if (n == 0)
+        return;
+    
+    if (n >= NUM_BITS) {
+        clearByte(byte);
+        return;
+    }
+    
+    if (n < 0) {
+        logWarn("shiftLeft function called with negative shift amount - using absolute value\n");
+        n = -n;
+    }
+    
+    for (i = NUM_BITS - 1; i >= n; i--)
+        byte->bits[i] = byte->bits[i-n];
+    
+    /* reset new bits */
+    for (; i >= 0; i--)
+        byte->bits[i] = 0;
+}
+
+void getAddrsMethods(int addrMethods[NUM_OPERANDS], Byte operationByte) {
+    int i;
+    
+    addrMethods[SOURCE_OPERAND_INDEX] = 0;
+    addrMethods[DEST_OPERAND_INDEX] = 0;
+    
+    for (i = 0; i < NUM_SOURCE_BITS; i++) {
+        if (operationByte.bits[i + SRC_OPERAND_ADDRS_START_BIT] == 1)
+            addrMethods[SOURCE_OPERAND_INDEX] += (int)pow(2, i);
+        
+        if (operationByte.bits[i + DEST_OPERAND_ADDRS_START_BIT] == 1)
+            addrMethods[DEST_OPERAND_INDEX] += (int)pow(2, i);
+    }
+}
+
+void writeAREBits(Byte *byte, int symbolFlags) {
+    const char ext[NUM_ARE_BITS] = { 1, 0 };
+    const char relocatable[NUM_ARE_BITS] = { 0, 1 };
+    
+    int i;
+    char *bits;
+    
+    bits = (char *)(((symbolFlags & SYMBOL_FLAG_EXTERN) != 0) ? ext : relocatable);
+    
+    for (i = 0; i < NUM_ARE_BITS; i++)
+        byte->bits[i] = bits[i];
 }
 
 /* flips a bit */

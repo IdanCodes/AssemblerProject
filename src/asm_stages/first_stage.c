@@ -34,7 +34,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
     unsigned int sourceLine, skippedLines;
     char sourceFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len, wordIndex, i, hasErr;
+    int len, numWords, i, hasErr;
     FILE *sourcef;
     Symbol *labelSymbol, *curr;
     Operation operation;
@@ -159,13 +159,13 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
             }
             
             labelSymbol->value = *instructionCounter + INSTRUCTION_COUNTER_OFFSET;
-            labelSymbol->flag = SYMBOL_FLAG_CODE;
+            labelSymbol->flags = SYMBOL_FLAG_CODE;
             addSymToList(symbols, labelSymbol);
         }
         
         /* fetch operands */
-        wordIndex = 0;
-        if ((err = fetchOperands(token, operation, *symbols, words, &wordIndex, operandAddrs)) != firstStageErr_no_err) {
+        numWords = 0;
+        if ((err = fetchOperands(token, operation, *symbols, words, &numWords, operandAddrs)) != firstStageErr_no_err) {
             printFirstStageError(err, sourceLine, sourceFileName);
             hasErr = 1;
             continue;
@@ -176,26 +176,28 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
         /* "merge" the operands if both are register addressing */
         if (operandAddrs[SOURCE_OPERAND_INDEX] == ADDR_REGISTER && operandAddrs[DEST_OPERAND_INDEX] == ADDR_REGISTER) {
             bytesOrGate(words[SOURCE_OPERAND_INDEX], words[DEST_OPERAND_INDEX], &words[SOURCE_OPERAND_INDEX]);
-            wordIndex--;    /* only has one extra word */
+            numWords--;    /* only has one extra word */
         }
-        *instructionCounter += wordIndex + 1;
+        *instructionCounter += numWords + 1;
         
         /* write instructions to file */
         addByteNodeToList(bytes, copyByte(firstWord));
-        for (i = 0; i < wordIndex; i++)
+        for (i = 0; i < numWords; i++)
             addByteNodeToList(bytes, copyByte(words[i]));
     }
     
-    /* write data to file (and add IC + 100 to their values) */
+    /* add IC+100 to the .data symbols' values */
     for (curr = *symbols; curr != NULL; curr = curr->next) {
-        if ((curr->flag & SYMBOL_FLAG_DATA) == 0)
+        if ((curr->flags & SYMBOL_FLAG_DATA) == 0)
             continue;
 
         curr->value += *instructionCounter + INSTRUCTION_COUNTER_OFFSET;
-        for (i = 0; i < curr->length; i++) {
-            numberToByte((*data)[curr->value + i - *instructionCounter - INSTRUCTION_COUNTER_OFFSET], &tempByte);
-            addByteNodeToList(bytes, copyByte(tempByte));
-        }
+    }
+    
+    /* write data to file */
+    for (i = 0; i < *dataCounter; i++) {
+        numberToByte((*data)[i], &tempByte);
+        addByteNodeToList(bytes, copyByte(tempByte));
     }
 
     
@@ -362,7 +364,7 @@ static void registerConstant(Symbol **head, char *name, int value) {
 
     sym = allocSymbol(name, getTokEnd(name) + 1);
     sym->value = value;
-    sym->flag = SYMBOL_FLAG_MDEFINE;
+    sym->flags = SYMBOL_FLAG_MDEFINE;
     
     addSymToList(head, sym);
 }
@@ -373,7 +375,7 @@ static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int len
     
     lblSym->value = value;
     lblSym->length = length;
-    lblSym->flag = SYMBOL_FLAG_DATA;
+    lblSym->flags = SYMBOL_FLAG_DATA;
 
     addSymToList(head, lblSym);
 }
@@ -508,6 +510,10 @@ static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symb
     if ((err = storeDataArgs(getNextToken(token), dataCounter, *symbols, data)) != firstStageErr_no_err)
         return err;
 
+    /* TODO: is this right? */
+    if (lblSym == NULL)
+        return firstStageErr_no_err;
+    
     if (symbolInList(*symbols, lblSym->name))
         return firstStageErr_label_name_taken;
     
@@ -579,14 +585,14 @@ static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lbl
     
     temp = *(tokEnd + 1);
     *(tokEnd + 1) = '\0';
-
+    
     if (isSavedKeyword(token)) {
         *(tokEnd + 1) = temp;
         return firstStageErr_extern_saved_keyword;
     }
     
     if (getSymbolByName(token, *symbols, &tempSym)) {
-        if ((tempSym->flag & SYMBOL_FLAG_EXTERN) == 0) {
+        if ((tempSym->flags & SYMBOL_FLAG_EXTERN) == 0) {
             *(tokEnd + 1) = temp;
             return firstStageErr_extern_label_exists;
         }
@@ -597,7 +603,7 @@ static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lbl
     *(tokEnd + 1) = temp;
 
     tempSym = allocSymbol(token, tokEnd + 1);
-    tempSym->flag = SYMBOL_FLAG_EXTERN;
+    tempSym->flags = SYMBOL_FLAG_EXTERN;
 
     addSymToList(symbols, tempSym);
     return err;
@@ -605,7 +611,7 @@ static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lbl
 
 static enum firstStageErr validateEntry(char *token, Symbol *lblSym) {
     enum firstStageErr err;
-    
+    /* TODO: check if the label we define as entry is the name of a constant */
     err = firstStageErr_no_err;
     
     token = getNextToken(token);
@@ -648,7 +654,7 @@ static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *
         return firstStageErr_data_nan;
     }
     
-    if (!getSymbolByName(start, symbols, &tempSym) || (tempSym->flag & SYMBOL_FLAG_MDEFINE) == 0) {
+    if (!getSymbolByName(start, symbols, &tempSym) || (tempSym->flags & SYMBOL_FLAG_MDEFINE) == 0) {
         *end = temp;
         return firstStageErr_data_const_not_found;
     }

@@ -14,10 +14,13 @@
 #define NUM_SOURCE_BITS (2) /* number of bits for the source addressing method */
 #define NUM_DEST_BITS   (2) /* number of bits for the destination addressing method */
 #define NUM_OPCODE_BITS (4) /* number of bits for the opcode */
-#define NUM_REGISTER_BITS   (3) /* number of bits for the register */
+#define NUM_REGISTER_BITS   (3) /* number of bits for a register */
 
-#define DEST_REGISTER_START_BIT (2) /* starting encoding bit for destination operand register */
-#define SOURCE_REGISTER_START_BIT (5) /* starting encoding bit for destination operand register */
+#define DEST_REGISTER_START_BIT (2) /* starting encoding bit for destination register operand (when both operands are registers) */
+#define SOURCE_REGISTER_START_BIT (5) /* starting encoding bit for source register operand (when both operands are registers) */
+
+#define DEST_OPERAND_ADDRS_START_BIT    (2) /* starting encoding bit for destination operand's addressing method */
+#define SRC_OPERAND_ADDRS_START_BIT (4) /* starting encoding bit for source operand's addressing method */
 
 #define BINARY_SYS_BASE (2) /* base of the binary system */
 
@@ -34,5 +37,8 @@ void writeRegisterToByte(Byte *pbyte, int registerNumber, int operandIndex);
 void bytesOrGate(Byte b1, Byte b2, Byte *outByte);
 void clearByte(Byte *pbyte);
 void printByteToFile(Byte byte, FILE *fp);
+void getAddrsMethods(int addrMethods[NUM_OPERANDS], Byte operationByte);
+void writeAREBits(Byte *byte, int symbolFlags);
+void shiftLeft(Byte *byte, int n);
 
 #endif  /* BINARYUTILS */

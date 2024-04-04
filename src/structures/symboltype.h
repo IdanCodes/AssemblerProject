@@ -13,7 +13,7 @@
 typedef struct symbol {
     char *name;
     int value;
-    int flag;
+    int flags;
     int length;
     struct symbol *next;
 } Symbol;
