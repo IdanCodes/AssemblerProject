@@ -40,5 +40,6 @@ void printByteToFile(Byte byte, FILE *fp);
 void getAddrsMethods(int addrMethods[NUM_OPERANDS], Byte operationByte);
 void writeAREBits(Byte *byte, int symbolFlags);
 void shiftLeft(Byte *byte, int n);
+int byteToNumber(Byte byte, int startIndex);
 
 #endif  /* BINARYUTILS */

@@ -217,6 +217,25 @@ void writeAREBits(Byte *byte, int symbolFlags) {
         byte->bits[i] = bits[i];
 }
 
+/**
+ * Converts a byte into a number
+ * @param byte the given byte
+ * @param startIndex the bit startIndex to start reading from
+ * @return the number the byte represents
+ */
+int byteToNumber(Byte byte, int startIndex) {
+    int i, result;
+
+    startIndex = startIndex >= 0 ? startIndex : 0;
+    
+    for (i = startIndex, result = 0; i < NUM_BITS; i++) {
+        if (byte.bits[i] != 0)
+            result += (int)pow(BINARY_SYS_BASE, i - startIndex);
+    }
+    
+    return result;
+}
+
 /* flips a bit */
 static char getFlippedBit(char b) {
     return b == 0 ? 1 : 0;

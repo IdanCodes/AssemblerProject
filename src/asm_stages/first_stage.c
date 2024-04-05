@@ -411,7 +411,7 @@ static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **pLblSy
 }
 
 static enum firstStageErr fetchConstant(char *line, Symbol **symbols) {
-    char *name, *token, *equalsSign, *strVal;
+    char *name, *token, *equalsSign, *strVal, *nameEnd;
     int numberValue;
     
     token = getStart(line);
@@ -427,7 +427,7 @@ static enum firstStageErr fetchConstant(char *line, Symbol **symbols) {
         return firstStageErr_define_expected_equal_sign;
 
     /* fetch strVal + syntax validation */
-    strVal = (token = getNextToken(equalsSign));
+    strVal = (token = getStart(equalsSign + 1));
     if (*strVal == '\0')
         return firstStageErr_define_value_expected;
     
@@ -435,7 +435,10 @@ static enum firstStageErr fetchConstant(char *line, Symbol **symbols) {
         return firstStageErr_define_unexpected_chars;
 
     /* make sure the constant's name is valid */
-    if (!validSymbolName(name, getTokEnd(name)))
+    /* check if the equals sign is in the same token as the name -
+     * - if it is, the end of the name is (equalsSign - 1), else it's the end of the name token */
+    nameEnd = isInTok(name, equalsSign) ? equalsSign - 1 : getTokEnd(name);
+    if (!validSymbolName(name, nameEnd))
         return firstStageErr_define_invalid_name;
 
     /* check if the name is a saved keyword */
@@ -451,7 +454,9 @@ static enum firstStageErr fetchConstant(char *line, Symbol **symbols) {
         return firstStageErr_define_value_nan;
 
     /* register the new constant */
+    *equalsSign = '\0'; /* so the symbol's name will be duplicated correctly */
     registerConstant(symbols, name, numberValue);
+    *equalsSign = '=';
     
     return firstStageErr_no_err;
 }
@@ -557,12 +562,14 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     if (quoteEnd != getTokEnd(quoteEnd) || *getNextToken(quoteEnd) != '\0')
         return firstStageErr_string_extra_chars;
 
-    if (symbolInList(*symbols, lblSym->name))
+    if (lblSym != NULL && symbolInList(*symbols, lblSym->name))
         return firstStageErr_label_name_taken;
     
     prevDC = *dataCounter;
     storeStringInData(quoteStart, quoteEnd, dataCounter, data);
-    registerDataSymbol(symbols, lblSym, prevDC, *dataCounter - prevDC);
+    
+    if (lblSym != NULL)
+        registerDataSymbol(symbols, lblSym, prevDC, *dataCounter - prevDC);
     return firstStageErr_no_err;
 }
 
@@ -722,7 +729,10 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
             sqrBracksClose = getFirstOrEnd(sqrBracksOpen, OPERAND_INDEX_END_CHAR);
             if (*sqrBracksClose == '\0')
                 return firstStageErr_operation_expected_closing_sqr_bracks;
-            tokEnd = getEndOfOperand(sqrBracksClose);   /* there could be a space inside the brackets - update the token end */
+            tokEnd = getStart(sqrBracksClose + 1);   /* there could be a space inside the brackets - update the token end */
+            
+            if (*tokEnd != ',' && *tokEnd != '\0')
+                return firstStageErr_operation_invalid_operand;
             
             indexStart = getStart(sqrBracksOpen + 1);   /* skip the spaces between '[' and start of operand */
             if (indexStart == sqrBracksClose)
@@ -732,10 +742,8 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
             for (indexEnd = sqrBracksClose - 1; isspace(*indexEnd); indexEnd--)
                 ;
 
-            if (getTokEnd(indexStart) < indexEnd)   /* the index is not a single token */
-                return firstStageErr_operation_invalid_index;
-                
-            if (fetchNumber(indexStart, indexEnd + 1, &num, symbols) != firstStageErr_no_err)
+            if (getTokEnd(indexStart) < indexEnd || /* the index is not a single token */
+                fetchNumber(indexStart, indexEnd + 1, &num, symbols) != firstStageErr_no_err)   /* can't read the number */
                 return firstStageErr_operation_invalid_index;
 
             if (!validSymbolName(token, sqrBracksOpen))

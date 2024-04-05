@@ -15,7 +15,7 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
     char sourceFileName[FILENAME_MAX], objFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     char line[MAXLINE + 1];
     unsigned int sourceLine, skippedLines;
-    int instructionCounter, len, hasErr, operandIndex, addrsMethods[NUM_OPERANDS];
+    int instructionCounter, len, hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS];
     FILE *sourcef, *objf, *entf, *extf;
     Symbol *tempSym;
     Operation op;
@@ -52,7 +52,6 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
             
         /* .entry instruction? */
         if (tokcmp(token, KEYWORD_ENTRY_DEC) == 0) {
-            /* TODO: write to entry file */
             token = getNextToken(token);
             *(getTokEnd(token) + 1) = '\0'; /* this line will not be read anymore - no need to save the character's value */
             if (!getSymbolByName(token, symbols, &tempSym)) {
@@ -137,8 +136,18 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
             /* is the symbol an extern? */
             if ((tempSym->flags & SYMBOL_FLAG_EXTERN) != 0)
                 fprintf(extf, "%d %s\n", instructionCounter, token);
+            else if (addrsMethods[operandIndex] == ADDR_CONSTANT_INDEX) {
+                /* the operand isn't extern, we know its length */
+                index = byteToNumber(bytes->next->byte, NUM_ARE_BITS);  /* fetch the index from the next byte */
+                if (index < 0 || index >= tempSym->length) {
+                    printSecondStageErr(secondStageErr_operation_index_oor, sourceLine, sourceFileName);
+                    hasErr = 1;
+                    break;
+                }
+            }
             
             nextOperand:
+            /* check if both are not registers */
             if (operandIndex == SOURCE_OPERAND_INDEX || addrsMethods[SOURCE_OPERAND_INDEX] != ADDR_REGISTER || addrsMethods[DEST_OPERAND_INDEX] != ADDR_REGISTER) {
                 instructionCounter++;
                 bytes = bytes->next;
@@ -152,8 +161,6 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
             *oprndEnd = temp;
             token = getStart(tokEnd + 1);
         }
-        
-        /*instructionCounter += getNumWords(addrsMethods) + 1;*/
     }
     
     return hasErr;
@@ -185,6 +192,9 @@ static char *getErrMsg(enum secondStageErr err) {
             
         case secondStageErr_operation_symbol_undefined:
             return "undefined symbol";
+            
+        case secondStageErr_operation_index_oor:
+            return "index out of range";
             
         default:
             return "UNDEFINED ERROR";

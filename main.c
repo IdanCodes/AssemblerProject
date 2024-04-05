@@ -14,7 +14,7 @@
 int main(void) {
     int *data;
     Symbol *symbols;
-    ByteNode *bytes, *temp;
+    ByteNode *bytes;
     int hasErr, i, instructionCounter, dataCounter;
     
     hasErr = !preAssemble(FILENAME);
@@ -27,28 +27,6 @@ int main(void) {
     /* TODO: length check for arrays access */
     
     hasErr = assemblerFirstStage(FILENAME, &data, &symbols, &bytes, &instructionCounter, &dataCounter);
-    
-    temp = bytes;
-    logInfo("Instructions:\n");
-    for (i = 0; i < instructionCounter; i++) {
-        printf("%d ", i + INSTRUCTION_COUNTER_OFFSET);
-        if (bytes->byte.hasValue)
-            printByteToFile(bytes->byte, stdout);
-        else
-            printf("?\n");
-        bytes = bytes->next;
-    }
-
-    logInfo("Data:\n");
-    for (i = 0; i < dataCounter; i++) {
-        printf("%d ", instructionCounter + i + INSTRUCTION_COUNTER_OFFSET);
-        printByteToFile(bytes->byte, stdout);
-        bytes = bytes->next;
-    }
-    
-    printf("\n\n\n\n\n\n\n\n\n\n");
-    bytes = temp;
-    
     hasErr = hasErr || (assemblerSecondStage(FILENAME, data, symbols, bytes, instructionCounter, dataCounter));
     
     if (hasErr)

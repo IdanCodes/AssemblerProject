@@ -14,7 +14,8 @@ enum secondStageErr {
     
     /* operation */
     secondStageErr_operation_symbol_undefined,  /* undefined symbol as operand */
-    secondStageErr_operation_symbol_constant    /* trying to use a constant as a "non-immediate" operand */
+    secondStageErr_operation_symbol_constant,   /* trying to use a constant as a "non-immediate" operand */
+    secondStageErr_operation_index_oor  /* index out of range */
 };
 
 int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *bytes, int numInstructions, int dataCounter);

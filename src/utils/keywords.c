@@ -15,6 +15,7 @@ int isRegisterName(char *keyword, int *regIndex) {
             *regIndex >= REGISTER_FIRST && *regIndex < REGISTER_FIRST + REGISTER_COUNT; /* register index in range */
 }
 
+/* compares token */
 int isSavedKeyword(char *keyword) {
     int tempInt;
     Operation tempOp;
