@@ -354,6 +354,9 @@ static char *getErrMessage(enum firstStageErr err) {
         case firstStageErr_operation_too_many_operands:
             return "too many operands";
             
+        case firstStageErr_operation_extra_chars:
+            return "extra characters at the end of the line";
+            
         default:
             return "UNDEFINED ERROR";
     }
@@ -514,8 +517,7 @@ static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symb
     prevDC = *dataCounter;
     if ((err = storeDataArgs(getNextToken(token), dataCounter, *symbols, data)) != firstStageErr_no_err)
         return err;
-
-    /* TODO: is this right? */
+    
     if (lblSym == NULL)
         return firstStageErr_no_err;
     
@@ -775,8 +777,12 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
 
         if (*tokEnd != '\0') {
             token = getStart(tokEnd + 1);
-            if (*token == '\0' && *tokEnd == ',')
-                return firstStageErr_operation_expected_operand;
+            if (*token == '\0' && *tokEnd == ',') {
+                if (operandIndex < numOps - 1)
+                    return firstStageErr_operation_expected_operand;
+                else
+                    return firstStageErr_operation_extra_chars;
+            }
         }
         else
             token = tokEnd;

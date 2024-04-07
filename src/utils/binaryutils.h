@@ -5,6 +5,8 @@
 #include "operations.h"
 
 #define NUM_BITS    (14)    /* number of bits in a word */
+#define NUM_BITS_BASE_4 (7) /* number of bits in a base 4 byte */
+
 #define MIN_NUMBER  (-8192) /* -(2^(NUM_BITS - 1) */
 #define MAX_NUMBER  (8191)  /* (2^(NUM_BITS - 1) - 1) */
 #define MIN_IMMEDIATE   (-2048) /* -(2^(NUM_BITS - NUM_ARE_BITS - 1) */
@@ -24,6 +26,12 @@
 
 #define BINARY_SYS_BASE (2) /* base of the binary system */
 
+/* base 4 characters */
+#define BASE_4_ZERO '*'
+#define BASE_4_ONE  '#'
+#define BASE_4_TWO  '%'
+#define BASE_4_THREE    '!'
+
 typedef struct {
     int hasValue;
     char bits[NUM_BITS];
@@ -41,5 +49,6 @@ void getAddrsMethods(int addrMethods[NUM_OPERANDS], Byte operationByte);
 void writeAREBits(Byte *byte, int symbolFlags);
 void shiftLeft(Byte *byte, int n);
 int byteToNumber(Byte byte, int startIndex);
+void printBase4(FILE *fp, Byte byte);
 
 #endif  /* BINARYUTILS */

@@ -11,7 +11,7 @@
 #define KEYWORD_ENTRY_DEC   ".entry"
 
 #define KEYWORD_REGISTER_PREFIX "r"
-#define REGISTER_FIRST  1
+#define REGISTER_FIRST  0
 #define REGISTER_COUNT  8
 
 #define KEYWORD_OPERATION_MOV   "mov"

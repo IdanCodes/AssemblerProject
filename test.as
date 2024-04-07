@@ -1,16 +1,17 @@
-;.define hi = 1024
-;ENDSTR: .string "FINISHED!"
+; .define hi = 102
+; ENDSTR: .string "FINISHED!"
 ;.string "WILL WOOkfslksaskjsdlks.mnffmf.,somestring: saaaadAmfsdfdfklsmklAsdm :D"
-;HELLO: mov #hi, r1
+; HELLO: mov #hi, r1
 
-;HI: .extern meow
+; .extern meow
 
-;LOOPSTART: prn #hi
-;dec r1
-;cmp r1, #0
-;bne LOOPSTART
+; LOOPSTART: prn #hi
+; dec r1
+; cmp r1, #0
+; bne LOOPSTART
 
-;prn ENDSTR
+; prn ENDSTR
+; prn meow
 
 ;.define index = 1
 ;ARR: .data 2, 3, index

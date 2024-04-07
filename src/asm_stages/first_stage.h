@@ -67,7 +67,8 @@ enum firstStageErr {
     firstStageErr_operation_expected_comma, /* expected comma to seperate operands */
     firstStageErr_operation_immediate_oor,  /* immediate operand was out of range */
     firstStageErr_operation_index_oor,  /* constant index was out of range */
-    firstStageErr_operation_too_many_operands   /* too many operands for an operation */
+    firstStageErr_operation_too_many_operands, /* too many operands for an operation */
+    firstStageErr_operation_extra_chars /* extra characters at the end of the line */
 };
 
 int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter);

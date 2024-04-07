@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "second_stage.h"
 #include "first_stage.h"
 #include "../utils/inpututils.h"
@@ -10,31 +11,31 @@
 static void printSecondStageErr(enum secondStageErr err, unsigned int lineNumber, char *fileName);
 static char *getErrMsg(enum secondStageErr err);
 
-int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *bytes, int numInstructions, int dataCounter) {
+int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
     char *token, *tokEnd, *oprndEnd, temp;
-    char sourceFileName[FILENAME_MAX], objFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
+    char sourceFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     char line[MAXLINE + 1];
     unsigned int sourceLine, skippedLines;
-    int instructionCounter, len, hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS];
-    FILE *sourcef, *objf, *entf, *extf;
+    int instructionCounter, len, hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS], hasEnt, hasExt;
+    FILE *sourcef, *entf, *extf;
     Symbol *tempSym;
     Operation op;
     
     
     /* -- open files -- */
     sprintf(sourceFileName, "%s.%s", fileName, PRE_ASSEMBLED_FILE_EXTENSION);
-    sprintf(objFileName, "%s.%s", fileName, OBJECT_FILE_EXTENSION);
     sprintf(entFileName, "%s.%s", fileName, ENTRIES_FILE_EXTENSION);
     sprintf(extFileName, "%s.%s", fileName, EXTERNALS_FILE_EXTENSION);
 
     openFile(sourceFileName, "r", &sourcef);
-    openFile(objFileName, "w", &objf);
     openFile(entFileName, "w", &entf);
     openFile(extFileName, "w", &extf);
     
     sourceLine = 0;
     instructionCounter = INSTRUCTION_COUNTER_OFFSET;
     hasErr = 0;
+    hasEnt = 0;
+    hasExt = 0;
     while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
         sourceLine += skippedLines;
         
@@ -82,16 +83,12 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
             
             tempSym->flags |= SYMBOL_FLAG_ENTRY; /* declare symbol as entry */
             fprintf(entf, "%d %s\n", tempSym->value, token);
+            hasEnt = 1;
             continue;
         }
         
         if (!getOperationByName(token, &op))
             continue;   /* an error was already printed in the first stage */
-        
-        /* TODO: handle instructions */
-        /* absolute = 0 0
-         * external = 0 1
-         * internal = 1 0 */
 
         getAddrsMethods(addrsMethods, bytes->byte);
         
@@ -134,8 +131,10 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
             writeAREBits(&bytes->byte, tempSym->flags);
             
             /* is the symbol an extern? */
-            if ((tempSym->flags & SYMBOL_FLAG_EXTERN) != 0)
+            if ((tempSym->flags & SYMBOL_FLAG_EXTERN) != 0) {
                 fprintf(extf, "%d %s\n", instructionCounter, token);
+                hasExt = 1;
+            }
             else if (addrsMethods[operandIndex] == ADDR_CONSTANT_INDEX) {
                 /* the operand isn't extern, we know its length */
                 index = byteToNumber(bytes->next->byte, NUM_ARE_BITS);  /* fetch the index from the next byte */
@@ -163,6 +162,17 @@ int assemblerSecondStage(char fileName[], int *data, Symbol *symbols, ByteNode *
         }
     }
     
+    /* close open files */
+    fclose(sourcef);
+    fclose(entf);
+    fclose(extf);
+    
+    /* delete empty output files */
+    if (!hasEnt)
+        deleteFile(entFileName);
+    if (!hasExt)
+        deleteFile(extFileName);
+        
     return hasErr;
 }
 

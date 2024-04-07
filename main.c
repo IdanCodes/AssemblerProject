@@ -16,43 +16,64 @@ int main(void) {
     Symbol *symbols;
     ByteNode *bytes;
     int hasErr, i, instructionCounter, dataCounter;
+    char objectFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
+    FILE *objf;
+    
+    sprintf(objectFileName, "%s.%s", FILENAME, OBJECT_FILE_EXTENSION);
+    sprintf(entFileName, "%s.%s", FILENAME, ENTRIES_FILE_EXTENSION);
+    sprintf(extFileName, "%s.%s", FILENAME, EXTERNALS_FILE_EXTENSION);
     
     hasErr = !preAssemble(FILENAME);
     
     if (hasErr) {
         logInfo("Encounterd an error in pre-assembler.\n");
+        
+        /* try to delete output files (if they exist) */
+        tryDeleteFile(objectFileName);
+        tryDeleteFile(entFileName);
+        tryDeleteFile(extFileName);
+        
         return 1;
     }
     
-    /* TODO: length check for arrays access */
-    
     hasErr = assemblerFirstStage(FILENAME, &data, &symbols, &bytes, &instructionCounter, &dataCounter);
-    hasErr = hasErr || (assemblerSecondStage(FILENAME, data, symbols, bytes, instructionCounter, dataCounter));
+    hasErr = hasErr || (assemblerSecondStage(FILENAME, symbols, bytes));
     
-    if (hasErr)
+    openFile(objectFileName, "w", &objf);
+    
+    if (hasErr) {
         logInfo("The assembler encountered an error.\n");
-    else {
-        logInfo("Instructions:\n");
-        for (i = 0; i < instructionCounter; i++) {
-            printf("%d ", i + INSTRUCTION_COUNTER_OFFSET);
-            if (bytes->byte.hasValue)
-                printByteToFile(bytes->byte, stdout);
-            else
-                printf("?\n");
-            bytes = bytes->next;
-        }
         
-        logInfo("Data:\n");
-        for (i = 0; i < dataCounter; i++) {
-            printf("%d ", instructionCounter + i + INSTRUCTION_COUNTER_OFFSET);
+        /* delete the output files */
+        fclose(objf);
+        deleteFile(objectFileName);
+        tryDeleteFile(entFileName);
+        tryDeleteFile(extFileName);
+        
+        /* free allocated memory */
+        free(data);
+        freeSymbolsList(symbols);
+        freeByteList(bytes);
+        return 1;
+    }
+    else {
+        /* write to object file */
+        fprintf(objf, "%d %d\n", instructionCounter, dataCounter);
+        for (i = INSTRUCTION_COUNTER_OFFSET; bytes != NULL; bytes = bytes->next, i++) {
+            fprintf(objf, "%04d ", i);  /* print instruction number in memory */
+            printBase4(objf, bytes->byte);
             printByteToFile(bytes->byte, stdout);
-            bytes = bytes->next;
+            putc('\n', objf);
         }
     }
     
+    /* close open file */
+    
+    
+    /* free allocated data */
     free(data);
     freeSymbolsList(symbols);
     freeByteList(bytes);
     
-    return 0;
+    return hasErr;
 }

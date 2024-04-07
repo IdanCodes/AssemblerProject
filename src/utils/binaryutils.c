@@ -236,6 +236,36 @@ int byteToNumber(Byte byte, int startIndex) {
     return result;
 }
 
+/* print a byte in base 4 to a file */
+void printBase4(FILE *fp, Byte byte/*, char base4[NUM_BITS_BASE_4 + 1]*/) {
+    int i;
+    
+    /* reading the byte in reverse and saving inside base4 */
+    for (i = NUM_BITS_BASE_4 - 1; i >= 0; i--) {
+        /*if (byte.bits[2 * i + 1] == 0) {
+            if (byte.bits[2 * i] == 0)
+                putc(BASE_4_ZERO, fp);
+            else
+                putc(BASE_4_TWO, fp);
+        }*/
+        putc(byte.bits[2 * i + 1] == 0  /* second bit */
+            ? ((byte.bits[2 * i] == 0)  /* first bit */
+                /* second bit off */
+                ? BASE_4_ZERO   /* first bit off */
+                : BASE_4_ONE)   /* first bit on */
+            : ((byte.bits[2 * i] == 0)  /* first bit */
+                /* second bit on */
+                ? BASE_4_TWO    /* first bit off */
+                : BASE_4_THREE) /* first bit on */
+            , fp);
+        
+    }
+    /*for (i = 0; i < NUM_BITS_BASE_4; i++)
+        base4[i] = (char)(byte.bits[NUM_BITS - 2 * i - 1] == 0
+                    ? (byte.bits[NUM_BITS - 2 * i] == 0 ? BASE_4_ZERO : BASE_4_ONE)
+                    : (byte.bits[NUM_BITS - 2 * i] == 0 ? BASE_4_TWO : BASE_4_THREE));*/
+}
+
 /* flips a bit */
 static char getFlippedBit(char b) {
     return b == 0 ? 1 : 0;
