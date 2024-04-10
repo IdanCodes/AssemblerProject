@@ -62,13 +62,9 @@ int main(void) {
         for (i = INSTRUCTION_COUNTER_OFFSET; bytes != NULL; bytes = bytes->next, i++) {
             fprintf(objf, "%04d ", i);  /* print instruction number in memory */
             printBase4(objf, bytes->byte);
-            printByteToFile(bytes->byte, stdout);
             putc('\n', objf);
         }
     }
-    
-    /* close open file */
-    
     
     /* free allocated data */
     free(data);

@@ -280,7 +280,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "argument expected";
             
         case firstStageErr_data_oor:
-            return "data argument out of range for a byte"; /* TODO: specify real range/number that was out of range */
+            return "data argument out of range for a byte";
             
             
         /* -- .string -- */
@@ -346,7 +346,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "comma expected to seperate operands";
             
         case firstStageErr_operation_immediate_oor:
-            return "immediate operand is out of range"; /* TODO: specify range, maybe add more arguments for errors to have more detail */
+            return "immediate operand is out of range";
             
         case firstStageErr_operation_index_oor:
             return "index is out of range";
@@ -620,7 +620,6 @@ static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lbl
 
 static enum firstStageErr validateEntry(char *token, Symbol *lblSym) {
     enum firstStageErr err;
-    /* TODO: check if the label we define as entry is the name of a constant */
     err = firstStageErr_no_err;
     
     token = getNextToken(token);

@@ -1,38 +1,38 @@
-; .define hi = 102
-; ENDSTR: .string "FINISHED!"
-;.string "WILL WOOkfslksaskjsdlks.mnffmf.,somestring: saaaadAmfsdfdfklsmklAsdm :D"
-; HELLO: mov #hi, r1
+.define LENGTH = 3
+.define TOADD = 2
+ARR: .data 1, 2, 3
 
-; .extern meow
+; print the values of the array
+mcr printArr
+prn ARR[0]
+prn ARR[1]
+prn ARR[2]
+endmcr
 
-; LOOPSTART: prn #hi
-; dec r1
-; cmp r1, #0
-; bne LOOPSTART
+; add TOADD to each element in ARR
+mcr addValues
+add #TOADD, ARR[0]
+add #TOADD, ARR[1]
+add #TOADD, ARR[2]
+endmcr
 
-; prn ENDSTR
-; prn meow
+; reset the array's values to their start values
+mcr resetValues
+mov STARTVALUES[0], ARR[0]
+mov STARTVALUES[1], ARR[1]
+mov STARTVALUES[2], ARR[2]
+endmcr
 
-;.define index = 1
-;ARR: .data 2, 3, index
-;mov r5, r2
+; save the start values of the array
+STARTVALUES: .data 0, 0, 0
+mov ARR[0], STARTVALUES[0]
+mov ARR[1], STARTVALUES[1]
+mov ARR[2], STARTVALUES[2]
 
-;.define sz = 2
-;MAIN:   mov r3, LIST[sz]
-;LOOP:   jmp L1
-;        prn #-5
-;        mov STR[5], STR[2]
-;        sub r1, r4
-;        cmp r3, #sz
-;        bne END     
-;L1:     inc K
-;        bne LOOP
-;END:    hlt
-;.define len = 4
-;STR:    .string "abcdef"
-;LIST:   .data 611, -9, len
-;K:      .data   22
-
-;MEOW: .data 3, 4
-;HIA1: mov MEOW[0], MEOW[1]
-;MEOWA: .data 2
+; reset the values of the array
+addValues
+printArr
+resetValues
+printArr
+addValues
+printArr

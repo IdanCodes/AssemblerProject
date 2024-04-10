@@ -3,13 +3,6 @@
 
 #include <stdio.h>
 
-typedef struct Macro {
-    char *name;
-    unsigned int startLine;
-    unsigned int endLine;
-    struct Macro *next;
-} Macro;
-
 enum preAssembleErr {
     preAssembleErr_no_err,
     preAssembleErr_mcr_expected,    /* macro name expected */
@@ -22,10 +15,5 @@ enum preAssembleErr {
 };
 
 enum preAssembleErr preAssemble(char fileName[]);
-char *preAsmErrMessage(enum preAssembleErr err);
-Macro *allocMcr(char *name);
-void freeMcr(Macro *mcr);
-Macro *getMacroWithName(char *name, Macro *head);
-void expandMacro(Macro *mcr, FILE *destf, char *sourcefileName); /* use fprintf */
 
 #endif /* PRE_ASM */
