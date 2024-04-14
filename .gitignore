@@ -10,3 +10,6 @@
 /bin
 /prog
 /*.am
+/*.obj
+/*.ent
+/*.ext
