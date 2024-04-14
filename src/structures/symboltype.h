@@ -9,7 +9,6 @@
 #define SYMBOL_FLAG_DATA    8
 #define SYMBOL_FLAG_ENTRY   16
 
-/* TODO: when accessing by index, check if the range of the index is bad out of bounds */
 typedef struct symbol {
     char *name;
     int value;

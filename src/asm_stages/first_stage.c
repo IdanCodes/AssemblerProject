@@ -6,10 +6,6 @@
 #include "../utils/charutils.h"
 #include "../utils/logger.h"
 #include "../utils/keywords.h"
-#include "../utils/operations.h"
-#include "../utils/binaryutils.h"
-
-/* TODO: remove pragma in all files */
 
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName);
 static char *getErrMessage(enum firstStageErr err);
@@ -168,6 +164,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
         if ((err = fetchOperands(token, operation, *symbols, words, &numWords, operandAddrs)) != firstStageErr_no_err) {
             printFirstStageError(err, sourceLine, sourceFileName);
             hasErr = 1;
+            
             continue;
         }
         
@@ -357,6 +354,9 @@ static char *getErrMessage(enum firstStageErr err) {
         case firstStageErr_operation_extra_chars:
             return "extra characters at the end of the line";
             
+        case firstStageErr_operation_operand_number:
+            return "A number operand has to follow a #";
+            
         default:
             return "UNDEFINED ERROR";
     }
@@ -373,9 +373,7 @@ static void registerConstant(Symbol **head, char *name, int value) {
 }
 
 static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int length) {
-    if (lblSym == NULL)
-        return;
-    
+    /* lblSym is not NULL here */
     lblSym->value = value;
     lblSym->length = length;
     lblSym->flags = SYMBOL_FLAG_DATA;
@@ -766,8 +764,18 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
             operandAddrs[operandIndex] = ADDR_DIRECT;
             words[(*wordIndex)++].hasValue = 0;
         }
-        else
+        else {
+            /* check if the token is an immediate number and print a warning if it is */
+            temp = *tokEnd;
+            *tokEnd = '\0';
+            if (tryParseToken(token, &num)) {
+                *tokEnd = temp;
+                return firstStageErr_operation_operand_number;
+            }
+            
+            *tokEnd = temp;
             return firstStageErr_operation_invalid_operand;
+        }
 
         nextOperand:
         tokEnd = getStart(tokEnd);  /* skip spaces */

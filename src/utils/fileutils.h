@@ -9,9 +9,7 @@
 #define OBJECT_FILE_EXTENSION           "obj"
 
 void openFile(char fileName[], char mode[], FILE **pfile);
-void openFileExt(char fileName[], char ext[], char mode[], FILE **pfile);
 int tryOpenFile(char fileName[], char mode[], FILE **pfile);
-int tryOpenFileExt(char fileName[], char ext[], char mode[], FILE **pfile);
 void deleteFile(char fileName[]);
 int tryDeleteFile(char fileName[]);
 

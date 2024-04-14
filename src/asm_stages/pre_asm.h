@@ -14,6 +14,6 @@ enum preAssembleErr {
     preAssembleErr_unexpected_end   /* unexpected endmcr outside of a macro */
 };
 
-enum preAssembleErr preAssemble(char fileName[]);
+int preAssemble(char fileName[]);
 
 #endif /* PRE_ASM */

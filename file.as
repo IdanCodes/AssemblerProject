@@ -1,11 +1,13 @@
 ; -- declarations
-; define a constant variable
-NUM: .define 10
+; define a constant value
+    .define numMin = 0
+; define a variable
+    NUM: .data 10
 ; declare an array
     ARR: .data 4, 3, 1
 ; declare strings
-    HI_STR: .string "HI"
-    END_STR: .string "END"
+    HISTR: .string "HI"
+    ENDSTR: .string "END"
 
 ; -- macro
 mcr my_mcr
@@ -16,15 +18,15 @@ mcr my_mcr
 endmcr
 
 ; -- print
-prn HI_STR
+prn HISTR
 
 ; -- loop
-; subtract 1 from NUM
-LOOP:   sub NUM
+; subtract 1 from num
+LOOP:   dec NUM
 ; insert macro
         my_mcr
-        cmp NUM, 0
+        cmp NUM, #numMin
 ; while NUM != 0 repeat the loop
         bne LOOP
 
-prn END_STR
+prn ENDSTR

@@ -13,8 +13,8 @@ static char *preAsmErrMessage(enum preAssembleErr err);
 
 /* DOCUMENT preAssemble */
 /* fileName is the name of the file without the added extension */
-/* returns 1 if there were no erros, else returns 0 */
-enum preAssembleErr preAssemble(char fileName[]) {
+/* returns 0 if there was an error (at least one), else returns 1 */
+int preAssemble(char fileName[]) {
     /* -- declarations -- */
     unsigned int sourceLine;
     int skippedLines, len, readingMcr, hasErr;
@@ -27,7 +27,12 @@ enum preAssembleErr preAssemble(char fileName[]) {
     sprintf(sourceFileName, "%s.%s", fileName, SOURCE_FILE_EXTENSION);
     sprintf(outFileName, "%s.%s", fileName, PRE_ASSEMBLED_FILE_EXTENSION);
 
-    openFile(sourceFileName, "r", &sourcef);    /* open requested file for reading */
+    /* open requested file for reading */
+    if (!tryOpenFile(sourceFileName, "r", &sourcef)) {
+        logErr("Insufficient permissions/storage to open file '%s', or it doesn't exist.\n", sourceFileName);
+        return 1;
+    }
+        
     openFile(outFileName, "w", &outf);      /* open pre-assembled file for writing */
     
     
@@ -126,7 +131,7 @@ enum preAssembleErr preAssemble(char fileName[]) {
     if (hasErr)
         deleteFile(outFileName);
     
-    return !hasErr;
+    return hasErr;
 }
 
 static void printPreAsmErr(enum preAssembleErr err, unsigned int sourceLine, char *sourceFileName) {
