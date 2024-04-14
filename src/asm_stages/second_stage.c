@@ -16,7 +16,7 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
     char sourceFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     char line[MAXLINE + 1];
     unsigned int sourceLine, skippedLines;
-    int instructionCounter, len, hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS], hasEnt, hasExt;
+    int instructionCounter, hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS], hasEnt, hasExt;
     FILE *sourcef, *entf, *extf;
     Symbol *tempSym;
     Operation op;
@@ -36,7 +36,7 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
     hasErr = 0;
     hasEnt = 0;
     hasExt = 0;
-    while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
+    while ((getNextLine(sourcef, line, 1, MAXLINE, &skippedLines)) != getLine_FILE_END) {
         sourceLine += skippedLines;
         
         token = getStart(line);

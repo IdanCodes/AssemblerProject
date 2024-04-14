@@ -16,12 +16,13 @@ static char *preAsmErrMessage(enum preAssembleErr err);
 /* returns 0 if there was an error (at least one), else returns 1 */
 int preAssemble(char fileName[]) {
     /* -- declarations -- */
-    unsigned int sourceLine;
-    int skippedLines, len, readingMcr, hasErr;
+    unsigned int sourceLine, skippedLines;
+    int readingMcr, hasErr;
     char line[MAXLINE + 1]; /* account for '\0' */
     char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token;
     FILE *sourcef, *outf;
     Macro *head, *tail, *mcr;
+    enum getLineStatus lineStatus;
     
     /* -- open source and output files -- */
     sprintf(sourceFileName, "%s.%s", fileName, SOURCE_FILE_EXTENSION);
@@ -41,8 +42,12 @@ int preAssemble(char fileName[]) {
     head = NULL;
     readingMcr = 0;
     hasErr = 0;
-    while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
+    while ((lineStatus = getNextLine(sourcef, line, 0, MAXLINE, &skippedLines)) != getLine_FILE_END) {
         sourceLine += skippedLines;
+        if (lineStatus == getLine_TOO_LONG) {
+            logWarn("Line %u in file \"%s\" is too long - ignoring it (maximum length is %d characters).\n", sourceLine, sourceFileName, MAXLINE - 1);
+            continue;
+        }
         
         token = line;   /* line is already trimmed */
         if (readingMcr) {

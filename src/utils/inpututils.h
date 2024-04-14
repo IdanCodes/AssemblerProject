@@ -11,7 +11,7 @@ enum getLineStatus {
     getLine_TOO_LONG
 };
 
-enum getLineStatus getLine(FILE *fp, char line[], unsigned int maxlen, int *len);
-int getNextLine(FILE *fp, char line[], unsigned int maxlen, int *len);
+enum getLineStatus getLine(FILE *fp, char line[], unsigned int maxlen);
+enum getLineStatus getNextLine(FILE *fp, char line[], int skipLong, unsigned int maxlen, unsigned int *skippedLines);
 
 #endif /* INPUTUTILS */

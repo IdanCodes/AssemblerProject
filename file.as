@@ -1,5 +1,5 @@
 ; -- declarations
-; define a constant value
+; define a constant valuekladsklasjdkljaskldasjkldlkasjdladkasjdlkaskldalsjdlajdlkajdlkasjdlkasjdlkasjdlkasjdlaskjdlaksjdalskdjlaksdjaslkdjaslkdjalskdjaslkdjaslkdjasdlkjasdlkjasdlkjasdlkasjdklj
     .define numMin = 0
 ; define a variable
     NUM: .data 10

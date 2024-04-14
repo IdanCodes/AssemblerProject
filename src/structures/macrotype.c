@@ -59,21 +59,22 @@ Macro *getMacroWithName(char *name, Macro *head) {
  */
 void expandMacro(Macro *mcr, FILE *destf, char *sourcefileName) {
     unsigned int sourceLine, skippedLines;
-    int len;
     char line[MAXLINE + 1];
     FILE *sourcef;
 
     openFile(sourcefileName, "r", &sourcef);
 
     for (sourceLine = 0, skippedLines = 0; sourceLine < mcr->startLine-1; sourceLine += skippedLines) {
-        if ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) == getLine_FILE_END)
+        if (getNextLine(sourcef, line, 1, MAXLINE, &skippedLines) == getLine_FILE_END)
             terminalError(1, "Error expanding macro '%s' - reached end of file (in file '%s').\n", mcr->name, sourcefileName);
     }
 
-    sourceLine += getNextLine(sourcef, line, MAXLINE, &len);
+    getNextLine(sourcef, line, 1, MAXLINE, &skippedLines);
+    sourceLine += skippedLines;
     for (; sourceLine < mcr->endLine;) {
         fprintf(destf, "%s\n", line);
-        sourceLine += getNextLine(sourcef, line, MAXLINE, &len);
+        getNextLine(sourcef, line, 1, MAXLINE, &skippedLines);
+        sourceLine += skippedLines;
     }
 
     fclose(sourcef);

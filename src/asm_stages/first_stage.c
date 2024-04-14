@@ -30,7 +30,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
     unsigned int sourceLine, skippedLines;
     char sourceFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
     char line[MAXLINE + 1]; /* account for '\0' */
-    int len, numWords, i, hasErr;
+    int numWords, i, hasErr;
     FILE *sourcef;
     Symbol *labelSymbol, *curr;
     Operation operation;
@@ -55,7 +55,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
     *symbols = NULL;
     hasErr = 0;
     *bytes = NULL;
-    while ((skippedLines = getNextLine(sourcef, line, MAXLINE, &len)) != getLine_FILE_END) {
+    while (getNextLine(sourcef, line, 1, MAXLINE, &skippedLines) != getLine_FILE_END) {
         sourceLine += skippedLines;
         /* if the previous symbol wasn't used, free it */
         if (labelSymbol != NULL) {
@@ -208,6 +208,12 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
     return hasErr;
 }
 
+/**
+ * Prints a firstStageErr error message in association with the line in the file it occurred and the file's name.
+ * @param err The error to print
+ * @param sourceLine The line the error occured on in the file
+ * @param fileName The name of the file the error occured on
+ */
 static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName) {
     char *message;
     
@@ -218,6 +224,11 @@ static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine
     logErr("file \"%s\" line %u - %s\n", fileName, sourceLine, message);
 }
 
+/**
+ * Returns string error message of a firstStageErr
+ * @param err The error
+ * @return The desired error message
+ */
 static char *getErrMessage(enum firstStageErr err) {
     switch (err) {
         /* -- .define -- */
