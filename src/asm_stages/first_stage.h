@@ -37,6 +37,7 @@ enum firstStageErr {
     firstStageErr_string_expected_quotes,   /* quotes missing after .string */
     firstStageErr_string_expected_end_quotes,   /* quotes missing at end of .string definition */
     firstStageErr_string_extra_chars,   /* extra characters after closing quotes */
+    firstStageErr_string_not_printable, /* a character in the string is not printable */
     
     /* .extern errors */
     firstStageErr_extern_invalid_lbl_name,  /* the .extern parameter is not a valid name for a label */ 

@@ -73,6 +73,7 @@ void terminalError(int exitCode, char *fmt, ...) {
     logPrintInColorWithPrefix(LOGGER_ERR_COLOR, LOGGER_ERR_PREFIX, fmt, args);
 
     va_end(args);
+    /* exit will free all allocated memory in the program */
     exit(exitCode);
 }
 

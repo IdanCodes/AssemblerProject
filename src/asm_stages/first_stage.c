@@ -126,7 +126,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
             continue;
         }
         
-        /* entry instruction? */
+        /* .entry instruction? */
         if (tokcmp(token, KEYWORD_ENTRY_DEC) == 0) {
             if ((err = validateEntry(token, labelSymbol)) != firstStageErr_no_err) {
                 if (err == firstStageErr_entry_define_label)
@@ -294,10 +294,15 @@ static char *getErrMessage(enum firstStageErr err) {
         /* -- .string -- */
         case firstStageErr_string_expected_quotes:
             return "expected '\"' to start the string";
+            
         case firstStageErr_string_expected_end_quotes:
             return "expected '\"' to terminate the string";
+            
         case firstStageErr_string_extra_chars:
             return "extra characters after closing '\"'";
+            
+        case firstStageErr_string_not_printable:
+            return "string is not printable";
             
             
         /* -- .extern -- */
@@ -555,7 +560,7 @@ static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter
 /* token is the .string token */ 
 static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym) {
     int prevDC;
-    char *quoteStart, *quoteEnd;
+    char *quoteStart, *quoteEnd, *pc;
     
     quoteStart = getFirstOrEnd(token, '"');
     if (*quoteStart == '\0' || getNextToken(token) < quoteStart)
@@ -575,6 +580,12 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
 
     if (lblSym != NULL && symbolInList(*symbols, lblSym->name))
         return firstStageErr_label_name_taken;
+    
+    /* check if the string is printable */
+    for (pc = quoteStart + 1; pc < quoteEnd; pc++) {
+        if (!isprint(*pc))
+            return firstStageErr_string_not_printable;
+    }
     
     prevDC = *dataCounter;
     storeStringInData(quoteStart, quoteEnd, dataCounter, data);

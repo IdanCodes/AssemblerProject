@@ -66,6 +66,7 @@ void expandMacro(Macro *mcr, FILE *destf, char *sourcefileName) {
 
     for (sourceLine = 0, skippedLines = 0; sourceLine < mcr->startLine-1; sourceLine += skippedLines) {
         if (getNextLine(sourcef, line, 1, MAXLINE, &skippedLines) == getLine_FILE_END)
+            /* this will never happen */
             terminalError(1, "Error expanding macro '%s' - reached end of file (in file '%s').\n", mcr->name, sourcefileName);
     }
 
