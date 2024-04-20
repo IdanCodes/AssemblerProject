@@ -2,6 +2,7 @@
 #define PRE_ASM
 
 #include <stdio.h>
+#include "../structures/macrotype.h"
 
 enum preAssembleErr {
     preAssembleErr_no_err,
@@ -14,6 +15,6 @@ enum preAssembleErr {
     preAssembleErr_unexpected_end   /* unexpected endmcr outside of a macro */
 };
 
-int preAssemble(char fileName[]);
+int preAssemble(char fileName[FILENAME_MAX], Macro **macros);
 
 #endif /* PRE_ASM */

@@ -28,15 +28,6 @@ Macro *allocMcr(char *name) {
 }
 
 /**
- * Free (deallocate) an allocated Macro
- * @param mcr the macro to free
- */
-void freeMcr(Macro *mcr) {
-    free(mcr->name);
-    free(mcr);
-}
-
-/**
  * Check if a macro with the given name exists (in the given list)
  * @param name the name to search
  * @param head the head of the list to search in
@@ -79,4 +70,25 @@ void expandMacro(Macro *mcr, FILE *destf, char *sourcefileName) {
     }
 
     fclose(sourcef);
+}
+
+/**
+ * Free (deallocate) an allocated Macro
+ * @param mcr the macro to free
+ */
+void freeMcr(Macro *mcr) {
+    free(mcr->name);
+    free(mcr);
+}
+
+/**
+ * Free a macro list
+ * @param head the head of the list to free
+ */
+void freeMcrList(Macro *head) {
+    if (head == NULL)
+        return;
+    
+    freeMcrList(head->next);
+    freeMcr(head);
 }

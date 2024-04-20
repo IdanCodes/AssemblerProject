@@ -12,20 +12,20 @@ static char *getErrMessage(enum firstStageErr err);
 static void registerConstant(Symbol **head, char *name, int value);
 static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int length);
 static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **pLblSymbol);
-static enum firstStageErr fetchConstant(char *line, Symbol **symbols);
+static enum firstStageErr fetchConstant(char *line, Symbol **symbols, Macro *macros);
 static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data);
-static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
+static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym, Macro *macros);
 static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter, int **data);
-static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym);
-static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lblSym);
+static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym, Macro *macros);
+static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lblSym, Macro *macros);
 static enum firstStageErr validateEntry(char *token, Symbol *lblSym);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
-static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
+static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Macro *macros, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
 
 /* DOCUMENT */
 /* fileName is the file's name without the extension */
 /* returns 1 if there was no error, 0 if there was one */
-int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter) {
+int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     char sourceFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
@@ -85,7 +85,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
                 printFirstStageError(firstStageErr_label_const_definition, sourceLine, sourceFileName);
                 hasErr = 1;
             }
-            else if ((err = fetchConstant(line, symbols)) != firstStageErr_no_err) {
+            else if ((err = fetchConstant(line, symbols, macros)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
                 hasErr = 1;
             }
@@ -95,7 +95,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
         /* storage instruction? */
         /* .data */
         if (tokcmp(token, KEYWORD_DATA_DEC) == 0) {
-            if ((err = fetchData(token, dataCounter, symbols, data, labelSymbol)) != firstStageErr_no_err) {
+            if ((err = fetchData(token, dataCounter, symbols, data, labelSymbol, macros)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
                 hasErr = 1;
             }
@@ -104,7 +104,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
         
         /* .string */
         if (tokcmp(token, KEYWORD_STRING_DEC) == 0) {
-            if ((err = fetchString(token, dataCounter, symbols, data, labelSymbol)) != firstStageErr_no_err) {
+            if ((err = fetchString(token, dataCounter, symbols, data, labelSymbol, macros)) != firstStageErr_no_err) {
                 printFirstStageError(err, sourceLine, sourceFileName);
                 hasErr = 1;
             }
@@ -113,7 +113,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
         
         /* .extern instruction? */
         if (tokcmp(token, KEYWORD_EXTERN_DEC) == 0) {
-            if ((err = fetchExtern(token, symbols, labelSymbol)) != firstStageErr_no_err) {
+            if ((err = fetchExtern(token, symbols, labelSymbol, macros)) != firstStageErr_no_err) {
                 if (err == firstStageErr_extern_exists)
                     logWarn("label was already declared as extern (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
                 else if (err == firstStageErr_extern_define_label)
@@ -154,6 +154,12 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
                 continue;
             }
             
+            if (getMacroWithName(labelSymbol->name, macros) != NULL) {
+                printFirstStageError(firstStageErr_label_macro_name, sourceLine, sourceFileName);
+                hasErr = 1;
+                continue;
+            }
+            
             labelSymbol->value = *instructionCounter + INSTRUCTION_COUNTER_OFFSET;
             labelSymbol->flags = SYMBOL_FLAG_CODE;
             addSymToList(symbols, labelSymbol);
@@ -161,7 +167,7 @@ int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode 
         
         /* fetch operands */
         numWords = 0;
-        if ((err = fetchOperands(token, operation, *symbols, words, &numWords, operandAddrs)) != firstStageErr_no_err) {
+        if ((err = fetchOperands(token, operation, *symbols, macros, words, &numWords, operandAddrs)) != firstStageErr_no_err) {
             printFirstStageError(err, sourceLine, sourceFileName);
             hasErr = 1;
             
@@ -254,7 +260,10 @@ static char *getErrMessage(enum firstStageErr err) {
             return "the constant's name is already used";
             
         case firstStageErr_define_value_nan:
-            return "constant value must be an immediate number";
+            return "constant value must be an immediate whole number";
+            
+        case firstStageErr_define_macro_name:
+            return "can't define a constant with the same name as a macro";
         
             
         /* -- label -- */
@@ -273,6 +282,8 @@ static char *getErrMessage(enum firstStageErr err) {
         case firstStageErr_label_empty_line:
             return "can't define a label on an empty line";
             
+        case firstStageErr_label_macro_name:
+            return "can't define a label with the same name as a macro";
             
         /* -- .data -- */
         case firstStageErr_data_nan:
@@ -317,6 +328,9 @@ static char *getErrMessage(enum firstStageErr err) {
             
         case firstStageErr_extern_saved_keyword:
             return "can't used .extern on a saved keyword";
+            
+        case firstStageErr_extern_macro_name:
+            return ".extern argument has the same name as a macro";
           
             
         /* -- .entry -- */
@@ -371,7 +385,10 @@ static char *getErrMessage(enum firstStageErr err) {
             return "extra characters at the end of the line";
             
         case firstStageErr_operation_operand_number:
-            return "A number operand has to follow a #";
+            return "a number operand has to follow a #";
+            
+        case firstStageErr_operation_operand_macro:
+            return "macro can't be used as an operand";
             
         default:
             return "UNDEFINED ERROR";
@@ -427,7 +444,7 @@ static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **pLblSy
     return firstStageErr_no_err;
 }
 
-static enum firstStageErr fetchConstant(char *line, Symbol **symbols) {
+static enum firstStageErr fetchConstant(char *line, Symbol **symbols, Macro *macros) {
     char *name, *token, *equalsSign, *strVal, *nameEnd;
     int numberValue;
     
@@ -459,19 +476,31 @@ static enum firstStageErr fetchConstant(char *line, Symbol **symbols) {
         return firstStageErr_define_invalid_name;
 
     /* check if the name is a saved keyword */
-    if (isSavedKeyword(name))
+    *equalsSign = '\0'; /* so the constant's name will be read correctly */
+    if (isSavedKeyword(name)) {
+        *equalsSign = '=';
         return firstStageErr_define_saved_keyword;
+    }
     
     /* check if the name is an existing symbols' names */
-    if (*symbols != NULL && symbolInList(*symbols, name))
+    if (*symbols != NULL && symbolInList(*symbols, name)) {
+        *equalsSign = '=';
         return firstStageErr_define_name_taken;
+    }
+    
+    /* check if the name is a macro's name */
+    if (getMacroWithName(name, macros) != NULL) {
+        *equalsSign = '=';
+        return firstStageErr_define_macro_name;
+    }
 
     /* make sure the numberValue is a number */
-    if (!tryParseToken(strVal, &numberValue))
+    if (!tryParseToken(strVal, &numberValue)) {
+        *equalsSign = '=';
         return firstStageErr_define_value_nan;
+    }
 
     /* register the new constant */
-    *equalsSign = '\0'; /* so the symbol's name will be duplicated correctly */
     registerConstant(symbols, name, numberValue);
     *equalsSign = '=';
     
@@ -524,7 +553,7 @@ static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *s
 }
 
 /* token is the .data token */
-static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym) {
+static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym, Macro *macros) {
     enum firstStageErr err;
     int prevDC;
 
@@ -537,6 +566,9 @@ static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symb
     
     if (symbolInList(*symbols, lblSym->name))
         return firstStageErr_label_name_taken;
+    
+    if (getMacroWithName(lblSym->name, macros) != NULL)
+        return firstStageErr_label_macro_name;
     
     registerDataSymbol(symbols, lblSym, prevDC, *dataCounter - prevDC);
     return firstStageErr_no_err;
@@ -558,7 +590,7 @@ static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter
 }
 
 /* token is the .string token */ 
-static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym) {
+static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym, Macro *macros) {
     int prevDC;
     char *quoteStart, *quoteEnd, *pc;
     
@@ -578,8 +610,12 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     if (quoteEnd != getTokEnd(quoteEnd) || *getNextToken(quoteEnd) != '\0')
         return firstStageErr_string_extra_chars;
 
-    if (lblSym != NULL && symbolInList(*symbols, lblSym->name))
-        return firstStageErr_label_name_taken;
+    if (lblSym != NULL) {
+        if (symbolInList(*symbols, lblSym->name))
+            return firstStageErr_label_name_taken;
+        if (getMacroWithName(lblSym->name, macros))
+            return firstStageErr_label_macro_name;
+    }
     
     /* check if the string is printable */
     for (pc = quoteStart + 1; pc < quoteEnd; pc++) {
@@ -592,10 +628,12 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     
     if (lblSym != NULL)
         registerDataSymbol(symbols, lblSym, prevDC, *dataCounter - prevDC);
+    
+    
     return firstStageErr_no_err;
 }
 
-static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lblSym) {
+static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lblSym, Macro *macros) {
     char *tokEnd, temp;
     Symbol *tempSym;
     enum firstStageErr err;
@@ -627,6 +665,11 @@ static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lbl
         }
         else
             err = firstStageErr_extern_exists;
+    }
+    
+    if (getMacroWithName(token, macros) != NULL) {
+        *(tokEnd + 1) = temp;
+        return firstStageErr_extern_macro_name;
     }
 
     *(tokEnd + 1) = temp;
@@ -692,7 +735,7 @@ static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *
     return firstStageErr_no_err;
 }
 
-static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]) {
+static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Macro *macros, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]) {
     int operandIndex, num, numOps;
     char temp, *tokEnd, *sqrBracksOpen, *sqrBracksClose, *indexStart, *indexEnd;
     
@@ -779,6 +822,15 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
                 return firstStageErr_operation_index_oor;
         }
         else if (validSymbolName(token, tokEnd)) {
+            /* check if the operand is a macro's name */
+            temp = *tokEnd;
+            *tokEnd = '\0';
+            if (getMacroWithName(token, macros)) {
+                *tokEnd = temp;
+                return firstStageErr_operation_operand_macro;
+            }
+            *tokEnd = temp;
+            
             /* the operand must be a direct (label) addressing */
             if (!validAddressingMethod(operation, operandIndex, ADDR_DIRECT))
                 return firstStageErr_operation_invalid_addr_method;

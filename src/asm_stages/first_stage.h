@@ -3,6 +3,7 @@
 
 #include "../structures/bytelist.h"
 #include "../structures/symboltype.h"
+#include "../structures/macrotype.h"
 
 #define INSTRUCTION_COUNTER_OFFSET  100
 
@@ -18,6 +19,7 @@ enum firstStageErr {
     firstStageErr_define_saved_keyword, /* the constant's name is a saved keyword */
     firstStageErr_define_name_taken,    /* name of constant taken */
     firstStageErr_define_value_nan, /* byte is not a number */
+    firstStageErr_define_macro_name,    /* there's a macro with the same name as the constant */
     
     /* label errors */
     firstStageErr_label_invalid_name,   /* invalid label name */
@@ -25,6 +27,7 @@ enum firstStageErr {
     firstStageErr_label_saved_keyword,  /* the label's name is a saved keyword */
     firstStageErr_label_name_taken, /* name of label taken */
     firstStageErr_label_empty_line, /* label defined on an empty line */
+    firstStageErr_label_macro_name, /* there's a macro with the same name as the label */
     
     /* .data errors */
     firstStageErr_data_nan, /* data parameter is not a number */
@@ -46,6 +49,7 @@ enum firstStageErr {
     firstStageErr_extern_saved_keyword, /* extern label is a saved keyword */
     firstStageErr_extern_define_label,  /* a label is defined in the beginning of an extern instruction (warning) */
     firstStageErr_extern_exists, /* this label was already declared as extern (warning) */
+    firstStageErr_extern_macro_name,    /* there's a macro with the same name as the .extern argument */
     
     /* .entry errors */
     firstStageErr_entry_invalid_lbl_name,   /* the .entry parameter is not a valid name for a label */
@@ -67,9 +71,10 @@ enum firstStageErr {
     firstStageErr_operation_index_oor,  /* constant index was out of range */
     firstStageErr_operation_too_many_operands, /* too many operands for an operation */
     firstStageErr_operation_extra_chars,    /* extra characters at the end of the line */
-    firstStageErr_operation_operand_number /* a number operand that doesn't follow # */
+    firstStageErr_operation_operand_number, /* a number operand that doesn't follow # */
+    firstStageErr_operation_operand_macro   /* a macro was used as an operand */ 
 };
 
-int assemblerFirstStage(char fileName[], int **data, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter);
+int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter);
 
 #endif /* FIRST_STAGE */

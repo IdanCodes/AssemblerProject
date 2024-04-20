@@ -26,5 +26,7 @@ int isSavedKeyword(char *keyword) {
            tokcmp(keyword, KEYWORD_MCR_END) == 0 ||
            tokcmp(keyword, KEYWORD_CONST_DEC) == 0 ||
            tokcmp(keyword, KEYWORD_DATA_DEC) == 0 ||
-           tokcmp(keyword, KEYWORD_STRING_DEC) == 0;
+           tokcmp(keyword, KEYWORD_STRING_DEC) == 0 ||
+           tokcmp(keyword, KEYWORD_ENTRY_DEC) == 0 ||
+           tokcmp(keyword, KEYWORD_EXTERN_DEC) == 0;
 }

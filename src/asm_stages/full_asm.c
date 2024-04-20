@@ -12,6 +12,7 @@ int assembleFile(char FILENAME[FILENAME_MAX]) {
     int *data;
     Symbol *symbols;
     ByteNode *bytes;
+    Macro *macros;
     int hasErr, i, instructionCounter, dataCounter;
     char sourceFileName[FILENAME_MAX], objectFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     FILE *objf;
@@ -22,9 +23,10 @@ int assembleFile(char FILENAME[FILENAME_MAX]) {
     sprintf(extFileName, "%s.%s", FILENAME, EXTERNALS_FILE_EXTENSION);
     
     logInfo("Assembling file \"%s\"...\n", sourceFileName);
-    hasErr = preAssemble(FILENAME);
+    hasErr = preAssemble(FILENAME, &macros);
 
     if (hasErr) {
+        freeMcrList(macros);
         /* try to delete output files (if they exist) */
         tryDeleteFile(objectFileName);
         tryDeleteFile(entFileName);
@@ -33,7 +35,9 @@ int assembleFile(char FILENAME[FILENAME_MAX]) {
         goto end;
     }
 
-    hasErr = assemblerFirstStage(FILENAME, &data, &symbols, &bytes, &instructionCounter, &dataCounter);
+    hasErr = assemblerFirstStage(FILENAME, &data, macros, &symbols, &bytes, &instructionCounter, &dataCounter);
+    freeMcrList(macros);
+    
     hasErr = hasErr || (assemblerSecondStage(FILENAME, symbols, bytes));
 
     if (hasErr) {

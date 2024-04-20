@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include "pre_asm.h"
 #include "../utils/logger.h"
 #include "../utils/inpututils.h"
@@ -6,7 +5,6 @@
 #include "../utils/fileutils.h"
 #include "../utils/charutils.h"
 #include "../utils/keywords.h"
-#include "../structures/macrotype.h"
 
 static void printPreAsmErr(enum preAssembleErr err, unsigned int sourceLine, char *sourceFileName);
 static char *preAsmErrMessage(enum preAssembleErr err);
@@ -14,14 +12,14 @@ static char *preAsmErrMessage(enum preAssembleErr err);
 /* DOCUMENT preAssemble */
 /* fileName is the name of the file without the added extension */
 /* returns 0 if there was an error (at least one), else returns 1 */
-int preAssemble(char fileName[]) {
+int preAssemble(char fileName[FILENAME_MAX], Macro **macros) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     int readingMcr, hasErr;
     char line[MAXLINE + 1]; /* account for '\0' */
     char sourceFileName[FILENAME_MAX], outFileName[FILENAME_MAX], *token;
     FILE *sourcef, *outf;
-    Macro *head, *tail, *mcr;
+    Macro *tail, *mcr;
     enum getLineStatus lineStatus;
     
     /* -- open source and output files -- */
@@ -39,7 +37,7 @@ int preAssemble(char fileName[]) {
     
     /* -- main loop -- */
     sourceLine = 0;
-    head = NULL;
+    *macros = NULL;
     readingMcr = 0;
     hasErr = 0;
     while ((lineStatus = getNextLine(sourcef, line, 0, MAXLINE, &skippedLines)) != getLine_FILE_END) {
@@ -87,7 +85,7 @@ int preAssemble(char fileName[]) {
                 break;
             }
             
-            if (getMacroWithName(token, head) != NULL) {
+            if (getMacroWithName(token, *macros) != NULL) {
                 printPreAsmErr(preAssembleErr_macro_exists, sourceLine, sourceFileName);
                 hasErr = 1;
                 break;
@@ -100,8 +98,8 @@ int preAssemble(char fileName[]) {
             }
 
             /* add the macro to the list */
-            if (head == NULL)
-                tail = (head = allocMcr(token));
+            if (*macros == NULL)
+                tail = (*macros = allocMcr(token));
             else
                 tail = (tail->next = allocMcr(token));
 
@@ -109,7 +107,7 @@ int preAssemble(char fileName[]) {
             continue; /* skip print */
         }
 
-        if ((mcr = getMacroWithName(token, head)) != NULL) {
+        if ((mcr = getMacroWithName(token, *macros)) != NULL) {
             if (*getNextToken(token) != '\0') {
                 printPreAsmErr(preAssembleErr_unexpected_chars_call, sourceLine, sourceFileName);
                 hasErr = 1;
@@ -127,11 +125,6 @@ int preAssemble(char fileName[]) {
     /* -- cleaning up -- */
     fclose(sourcef);
     fclose(outf);
-    
-    while (head != NULL) {
-        freeMcr(head);
-        head = head->next;
-    }
 
     if (hasErr)
         deleteFile(outFileName);
