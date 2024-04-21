@@ -1,0 +1,2 @@
+.extern myext a
+.extern myext, ext2

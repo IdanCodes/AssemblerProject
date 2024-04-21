@@ -318,16 +318,16 @@ static char *getErrMessage(enum firstStageErr err) {
             
         /* -- .extern -- */
         case firstStageErr_extern_invalid_lbl_name:
-            return "invalid label name for extern parameter";
+            return "invalid label name for extern argument";
             
         case firstStageErr_extern_extra_chars:
-            return "extra characters following .extern parameter";
+            return "extra characters following .extern argument";
             
         case firstStageErr_extern_label_exists:
             return "a symbol with this name already exists in this file";
             
         case firstStageErr_extern_saved_keyword:
-            return "can't used .extern on a saved keyword";
+            return "can't use .extern on a saved keyword";
             
         case firstStageErr_extern_macro_name:
             return ".extern argument has the same name as a macro";
@@ -335,10 +335,10 @@ static char *getErrMessage(enum firstStageErr err) {
             
         /* -- .entry -- */
         case firstStageErr_entry_invalid_lbl_name:
-            return "invalid label name for entry parameter";
+            return "invalid label name for entry argument";
             
         case firstStageErr_entry_extra_chars:
-            return "extra characters following .entry parameter";
+            return "extra characters following .entry argument";
             
             
         /* -- operations -- */
