@@ -47,12 +47,12 @@ enum firstStageErr {
     firstStageErr_extern_extra_chars,   /* extra characters at the end of an extern instruction */  /* DONE */
     firstStageErr_extern_label_exists,  /* the label is already defined in the file */  /* DONE */
     firstStageErr_extern_saved_keyword, /* extern label is a saved keyword */   /* DONE */
-    firstStageErr_extern_define_label,  /* a label is defined in the beginning of an extern instruction (warning) TODO */
-    firstStageErr_extern_exists, /* this label was already declared as extern (warning) TODO */
+    firstStageErr_extern_define_label,  /* a label is defined in the beginning of an extern instruction (warning) */    /* DONE */
+    firstStageErr_extern_exists, /* this label was already declared as extern (warning) */  /* DONE */
     firstStageErr_extern_macro_name,    /* there's a macro with the same name as the .extern argument */    /* DONE */
     
     /* .entry errors */
-    firstStageErr_entry_invalid_lbl_name,   /* the .entry parameter is not a valid name for a label */
+    firstStageErr_entry_invalid_lbl_name,   /* the .entry argument is not a valid name for a label */
     firstStageErr_entry_extra_chars,    /* extra characters at the end of an entry instruction */
     firstStageErr_entry_define_label,   /* a label is defined in the beginning of an entry instruction (warning) */
     
