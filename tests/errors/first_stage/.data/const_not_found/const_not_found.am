@@ -1,0 +1,2 @@
+myArr: .data 1, b, 3
+.define b = 2

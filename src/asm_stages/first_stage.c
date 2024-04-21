@@ -524,7 +524,7 @@ static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *s
         end = getFirstOrEnd(token, ',');
         next = (*end != '\0') ? getStart(end + 1) : getNextToken(token);
         
-        if ((*end != '\0' && end > next) || (*end == '\0' && *next != '\0'))
+        if ((*end != '\0' && getStart(getTokEnd(token) + 1) < end) || (*end == '\0' && *next != '\0'))
             return firstStageErr_data_comma_expected;
         
         if (*next == ',' || (*end != '\0' && *next == '\0'))

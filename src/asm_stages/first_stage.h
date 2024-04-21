@@ -30,11 +30,11 @@ enum firstStageErr {
     firstStageErr_label_macro_name, /* there's a macro with the same name as the label */   /* DONE */
     
     /* .data errors */
-    firstStageErr_data_nan, /* data parameter is not a number */
-    firstStageErr_data_comma_expected,  /* comma expected between arguments */
-    firstStageErr_data_const_not_found, /* constant referenced was not found */
-    firstStageErr_data_argument_expected,   /* argument expected in data */
-    firstStageErr_data_oor, /* the data argument was out of range for a byte */
+    firstStageErr_data_nan, /* .data argument is not a number */    /* DONE */
+    firstStageErr_data_comma_expected,  /* comma expected between arguments */  /* DONE */
+    firstStageErr_data_const_not_found, /* constant referenced was not found */ /* DONE */
+    firstStageErr_data_argument_expected,   /* argument expected in data */ /* DONE */
+    firstStageErr_data_oor, /* the data argument was out of range for a byte */ /* DONE */
     
     /* .string errors */
     firstStageErr_string_expected_quotes,   /* quotes missing after .string */
