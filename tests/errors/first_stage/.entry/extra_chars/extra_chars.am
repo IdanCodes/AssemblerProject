@@ -1,0 +1,2 @@
+stop: hlt
+.entry stop a

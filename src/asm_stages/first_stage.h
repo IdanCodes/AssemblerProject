@@ -52,8 +52,8 @@ enum firstStageErr {
     firstStageErr_extern_macro_name,    /* there's a macro with the same name as the .extern argument */    /* DONE */
     
     /* .entry errors */
-    firstStageErr_entry_invalid_lbl_name,   /* the .entry argument is not a valid name for a label */
-    firstStageErr_entry_extra_chars,    /* extra characters at the end of an entry instruction */
+    firstStageErr_entry_invalid_lbl_name,   /* the .entry argument is not a valid name for a label */   /* DONE */
+    firstStageErr_entry_extra_chars,    /* extra characters at the end of an entry instruction */   /* DONE */
     firstStageErr_entry_define_label,   /* a label is defined in the beginning of an entry instruction (warning) */
     
     /* operation errors */
