@@ -54,7 +54,7 @@ enum firstStageErr {
     /* .entry errors */
     firstStageErr_entry_invalid_lbl_name,   /* the .entry argument is not a valid name for a label */   /* DONE */
     firstStageErr_entry_extra_chars,    /* extra characters at the end of an entry instruction */   /* DONE */
-    firstStageErr_entry_define_label,   /* a label is defined in the beginning of an entry instruction (warning) */
+    firstStageErr_entry_define_label,   /* a label is defined in the beginning of an entry instruction (warning) */ /* DONE */
     
     /* operation errors */
     firstStageErr_operation_not_found,  /* invalid operator name */
