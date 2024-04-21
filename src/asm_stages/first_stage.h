@@ -11,15 +11,15 @@ enum firstStageErr {
     firstStageErr_no_err,   /* no error */
     
     /* .define errors */
-    firstStageErr_define_name_expected, /* name expected */
-    firstStageErr_define_unexpected_chars,  /* unexpected chars at the end of a define statement */
-    firstStageErr_define_expected_equal_sign,   /* expected after constant name */
-    firstStageErr_define_value_expected,    /* expected byte */
-    firstStageErr_define_invalid_name,  /* the constant's name was invalid */
-    firstStageErr_define_saved_keyword, /* the constant's name is a saved keyword */
-    firstStageErr_define_name_taken,    /* name of constant taken */
-    firstStageErr_define_value_nan, /* byte is not a number */
-    firstStageErr_define_macro_name,    /* there's a macro with the same name as the constant */
+    firstStageErr_define_name_expected, /* name expected */ /* DONE */
+    firstStageErr_define_unexpected_chars,  /* unexpected chars at the end of a define statement */ /* DONE */
+    firstStageErr_define_expected_equal_sign,   /* expected after constant name */  /* DONE */
+    firstStageErr_define_value_expected,    /* expected value for constant */   /* DONE */
+    firstStageErr_define_invalid_name,  /* the constant's name was invalid */   /* DONE */
+    firstStageErr_define_saved_keyword, /* the constant's name is a saved keyword */    /* DONE */
+    firstStageErr_define_name_taken,    /* name of constant taken */    /* DONE */
+    firstStageErr_define_value_nan, /* value is not a number */ /* DONE */
+    firstStageErr_define_macro_name,    /* there's a macro with the same name as the constant */    /* DONE */
     
     /* label errors */
     firstStageErr_label_invalid_name,   /* invalid label name */

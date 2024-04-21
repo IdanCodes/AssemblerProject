@@ -248,7 +248,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "equal sign expeceted";
             
         case firstStageErr_define_value_expected:
-            return "constant byte expected";
+            return "constant value expected";
             
         case firstStageErr_define_invalid_name:
             return "invalid name for a constant";
