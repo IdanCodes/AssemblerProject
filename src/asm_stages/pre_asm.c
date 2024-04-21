@@ -37,7 +37,6 @@ int preAssemble(char fileName[FILENAME_MAX], Macro **macros) {
     
     /* -- main loop -- */
     sourceLine = 0;
-    *macros = NULL;
     readingMcr = 0;
     hasErr = 0;
     while ((lineStatus = getNextLine(sourcef, line, 0, MAXLINE, &skippedLines)) != getLine_FILE_END) {
@@ -73,24 +72,35 @@ int preAssemble(char fileName[FILENAME_MAX], Macro **macros) {
             readingMcr = 1;
 
             /* error handling */
+            /* is the macro's name specified? */
             if (*(token = getNextToken(token)) == '\0') {
                 printPreAsmErr(preAssembleErr_mcr_expected, sourceLine, sourceFileName);
                 hasErr = 1;
                 break;
             }
             
+            /* are there unexpected characters after the macro's name? */
             if (*getNextToken(token) != '\0') {
                 printPreAsmErr(preAssembleErr_unexpected_chars_dec, sourceLine, sourceFileName);
                 hasErr = 1;
                 break;
             }
             
+            /* is the macro's name valid? */
+            if (!validMcrName(token)) {
+                printPreAsmErr(preAssembleErr_macro_invalid_name, sourceLine, sourceFileName);
+                hasErr = 1;
+                break;
+            }
+            
+            /* is there another macro with the same name? */
             if (getMacroWithName(token, *macros) != NULL) {
                 printPreAsmErr(preAssembleErr_macro_exists, sourceLine, sourceFileName);
                 hasErr = 1;
                 break;
             }
             
+            /* is the macro's name a saved keyword? */
             if (isSavedKeyword(token)) {
                 printPreAsmErr(preAssembleErr_macro_saved_name, sourceLine, sourceFileName);
                 hasErr = 1;
@@ -133,7 +143,7 @@ int preAssemble(char fileName[FILENAME_MAX], Macro **macros) {
 }
 
 static void printPreAsmErr(enum preAssembleErr err, unsigned int sourceLine, char *sourceFileName) {
-    logErr("%s (line %u in file '%s').\n", preAsmErrMessage(err), sourceLine, sourceFileName);
+    logErr("%s (line %u in file '%s')\n", preAsmErrMessage(err), sourceLine, sourceFileName);
 }
 
 /**
@@ -144,25 +154,28 @@ static void printPreAsmErr(enum preAssembleErr err, unsigned int sourceLine, cha
 static char *preAsmErrMessage(enum preAssembleErr err) {
     switch (err) {
         case preAssembleErr_mcr_expected:
-            return "Macro name expected";
+            return "macro name expected";
             
         case preAssembleErr_unexpected_chars_dec:
-            return "Unexpected characters after macro declaration";
+            return "unexpected characters after macro declaration";
             
         case preAssembleErr_unexpected_chars_end:
-            return "Unexpected characters after macro end";
+            return "unexpected characters after macro end";
             
         case preAssembleErr_unexpected_chars_call:
-            return "Unexpected characters after macro call";
+            return "unexpected characters after macro call";
             
         case preAssembleErr_macro_exists:
-            return "Macro name already used";
+            return "macro name already used";
             
         case preAssembleErr_macro_saved_name:
-            return "Macro name is a saved keyword";
+            return "macro name is a saved keyword";
             
         case preAssembleErr_unexpected_end:
-            return "Macro end is outside of a macro definition";
+            return "macro end is outside of a macro definition";
+            
+        case preAssembleErr_macro_invalid_name:
+            return "invalid name for a macro";
             
         default:
             return "UNDEFINED ERROR";

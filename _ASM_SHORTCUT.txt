@@ -1,0 +1,1 @@
+alias asm="\"\"\"/Users/idan/Library/CloudStorage/OneDrive-OpenUniversityofIsrael/אוניברסיטה/סמסטרים/2024א/מעבדה בתכנות מערכות/Project/Assembler-1/prog\"\"\""

@@ -5,6 +5,8 @@
 #include "../utils/strutils.h"
 #include "../utils/inpututils.h"
 #include "../utils/fileutils.h"
+#include "../utils/charutils.h"
+#include "symboltype.h"
 
 /**
  * Allocate a Macro
@@ -70,6 +72,26 @@ void expandMacro(Macro *mcr, FILE *destf, char *sourcefileName) {
     }
 
     fclose(sourcef);
+}
+
+/**
+ * check if a macro's name is valid
+ * @param name the name to check
+ * @return whether the given name was valid
+ */
+int validMcrName(char *name) {
+    int i;
+    
+    if (!isalpha(*name))
+        return 0;
+    
+    for (i = 1; i < LABEL_MAX_LENGTH && !isspace(name[i]) && name[i] != '\0'; i++) {
+        /* only allow alphanumeric characters and underscores */
+        if (!isalnum(name[i]) && name[i] != '_')
+            return 0;
+    }
+    
+    return i <= LABEL_MAX_LENGTH && (isspace(name[i]) || name[i] == '\0');
 }
 
 /**

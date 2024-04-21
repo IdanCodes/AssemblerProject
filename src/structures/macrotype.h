@@ -12,6 +12,7 @@ typedef struct Macro {
 
 Macro *allocMcr(char *name);
 Macro *getMacroWithName(char *name, Macro *head);
+int validMcrName(char *name);
 void expandMacro(Macro *mcr, FILE *destf, char *sourcefileName); /* use fprintf */
 void freeMcr(Macro *mcr);
 void freeMcrList(Macro *head);

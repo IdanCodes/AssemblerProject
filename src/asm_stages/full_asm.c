@@ -12,7 +12,7 @@ int assembleFile(char filename[FILENAME_MAX]) {
     int *data;
     Symbol *symbols;
     ByteNode *bytes;
-    Macro *macros;
+    Macro *macros = NULL;   /* so the macros won't start off as garbage */
     int hasErr, i, instructionCounter, dataCounter;
     char sourceFileName[FILENAME_MAX], objectFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     FILE *objf;
@@ -26,8 +26,8 @@ int assembleFile(char filename[FILENAME_MAX]) {
     hasErr = preAssemble(filename, &macros);
 
     if (hasErr) {
-        freeMcrList(macros);
         /* try to delete output files (if they exist) */
+        freeMcrList(macros);
         tryDeleteFile(objectFileName);
         tryDeleteFile(entFileName);
         tryDeleteFile(extFileName);

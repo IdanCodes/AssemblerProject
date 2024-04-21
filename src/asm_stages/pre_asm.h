@@ -12,7 +12,8 @@ enum preAssembleErr {
     preAssembleErr_unexpected_chars_call,   /* unexpected characters after macro call */ 
     preAssembleErr_macro_exists,    /* a macro with this name already exists */
     preAssembleErr_macro_saved_name,    /* the name of the macro is a saved name */
-    preAssembleErr_unexpected_end   /* unexpected endmcr outside of a macro */
+    preAssembleErr_unexpected_end,  /* unexpected endmcr outside of a macro */
+    preAssembleErr_macro_invalid_name   /* the macro's name is invalid */
 };
 
 int preAssemble(char fileName[FILENAME_MAX], Macro **macros);
