@@ -22,12 +22,12 @@ enum firstStageErr {
     firstStageErr_define_macro_name,    /* there's a macro with the same name as the constant */    /* DONE */
     
     /* label errors */
-    firstStageErr_label_invalid_name,   /* invalid label name */
-    firstStageErr_label_const_definition,   /* constant defined in a label */
-    firstStageErr_label_saved_keyword,  /* the label's name is a saved keyword */
-    firstStageErr_label_name_taken, /* name of label taken */
-    firstStageErr_label_empty_line, /* label defined on an empty line */
-    firstStageErr_label_macro_name, /* there's a macro with the same name as the label */
+    firstStageErr_label_invalid_name,   /* invalid label name */    /* DONE */
+    firstStageErr_label_const_definition,   /* constant defined in a label */   /* DONE */
+    firstStageErr_label_saved_keyword,  /* the label's name is a saved keyword */   /* DONE */
+    firstStageErr_label_name_taken, /* name of label taken */   /* DONE */
+    firstStageErr_label_empty_line, /* label defined on an empty line */    /* DONE */
+    firstStageErr_label_macro_name, /* there's a macro with the same name as the label */   /* DONE */
     
     /* .data errors */
     firstStageErr_data_nan, /* data parameter is not a number */
