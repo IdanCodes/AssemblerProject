@@ -8,7 +8,7 @@
 #include "first_stage.h"
 #include "second_stage.h"
 
-int assembleFile(char FILENAME[FILENAME_MAX]) {
+int assembleFile(char filename[FILENAME_MAX]) {
     int *data;
     Symbol *symbols;
     ByteNode *bytes;
@@ -17,13 +17,13 @@ int assembleFile(char FILENAME[FILENAME_MAX]) {
     char sourceFileName[FILENAME_MAX], objectFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     FILE *objf;
 
-    sprintf(sourceFileName, "%s.%s", FILENAME, SOURCE_FILE_EXTENSION);
-    sprintf(objectFileName, "%s.%s", FILENAME, OBJECT_FILE_EXTENSION);
-    sprintf(entFileName, "%s.%s", FILENAME, ENTRIES_FILE_EXTENSION);
-    sprintf(extFileName, "%s.%s", FILENAME, EXTERNALS_FILE_EXTENSION);
+    sprintf(sourceFileName, "%s.%s", filename, SOURCE_FILE_EXTENSION);
+    sprintf(objectFileName, "%s.%s", filename, OBJECT_FILE_EXTENSION);
+    sprintf(entFileName, "%s.%s", filename, ENTRIES_FILE_EXTENSION);
+    sprintf(extFileName, "%s.%s", filename, EXTERNALS_FILE_EXTENSION);
     
     logInfo("Assembling file \"%s\"...\n", sourceFileName);
-    hasErr = preAssemble(FILENAME, &macros);
+    hasErr = preAssemble(filename, &macros);
 
     if (hasErr) {
         freeMcrList(macros);
@@ -35,11 +35,17 @@ int assembleFile(char FILENAME[FILENAME_MAX]) {
         goto end;
     }
 
-    hasErr = assemblerFirstStage(FILENAME, &data, macros, &symbols, &bytes, &instructionCounter, &dataCounter);
+    hasErr = assemblerFirstStage(filename, &data, macros, &symbols, &bytes, &instructionCounter, &dataCounter);
     freeMcrList(macros);
     
-    hasErr = hasErr || (assemblerSecondStage(FILENAME, symbols, bytes));
+    hasErr = hasErr || (assemblerSecondStage(filename, symbols, bytes));
 
+    /* check memory length (if there's not already an error) */
+    if (!hasErr && (INSTRUCTION_COUNTER_OFFSET + instructionCounter + dataCounter) >= NUM_MEM_CELLS) {
+        hasErr = 1;
+        logErr("memory overflow in file \"%s\".\n", filename);
+    }
+    
     if (hasErr) {
         logInfo("The assembler encountered an error.\n");
 
