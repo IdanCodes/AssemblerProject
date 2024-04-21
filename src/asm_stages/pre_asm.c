@@ -42,7 +42,7 @@ int preAssemble(char fileName[FILENAME_MAX], Macro **macros) {
     while ((lineStatus = getNextLine(sourcef, line, 0, MAXLINE, &skippedLines)) != getLine_FILE_END) {
         sourceLine += skippedLines;
         if (lineStatus == getLine_TOO_LONG) {
-            logWarn("Line %u in file \"%s\" is too long - ignoring it (maximum length is %d characters).\n", sourceLine, sourceFileName, MAXLINE - 1);
+            logWarn("line %u in file \"%s\" is too long - ignoring it (maximum length is %d characters)\n", sourceLine, sourceFileName, MAXLINE - 1);
             continue;
         }
         
