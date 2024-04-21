@@ -1,2 +1,3 @@
 LABEL: .extern extLbl
 LABEL: .string "Hi!"
+mov extLbl, r2
