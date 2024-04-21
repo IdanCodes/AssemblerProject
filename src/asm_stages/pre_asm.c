@@ -102,7 +102,7 @@ int preAssemble(char fileName[FILENAME_MAX], Macro **macros) {
             
             /* is the macro's name a saved keyword? */
             if (isSavedKeyword(token)) {
-                printPreAsmErr(preAssembleErr_macro_saved_name, sourceLine, sourceFileName);
+                printPreAsmErr(preAssembleErr_macro_saved_keyword, sourceLine, sourceFileName);
                 hasErr = 1;
                 break;
             }
@@ -168,7 +168,7 @@ static char *preAsmErrMessage(enum preAssembleErr err) {
         case preAssembleErr_macro_exists:
             return "macro name already used";
             
-        case preAssembleErr_macro_saved_name:
+        case preAssembleErr_macro_saved_keyword:
             return "macro name is a saved keyword";
             
         case preAssembleErr_unexpected_end:
