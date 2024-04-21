@@ -37,10 +37,10 @@ enum firstStageErr {
     firstStageErr_data_oor, /* the data argument was out of range for a byte */ /* DONE */
     
     /* .string errors */
-    firstStageErr_string_expected_quotes,   /* quotes missing after .string */
-    firstStageErr_string_expected_end_quotes,   /* quotes missing at end of .string definition */
-    firstStageErr_string_extra_chars,   /* extra characters after closing quotes */
-    firstStageErr_string_not_printable, /* a character in the string is not printable */
+    firstStageErr_string_expected_quotes,   /* quotes missing after .string */  /* DONE */
+    firstStageErr_string_expected_end_quotes,   /* quotes missing at end of .string definition */   /* DONE */
+    firstStageErr_string_extra_chars,   /* extra characters after closing quotes */ /* DONE */
+    firstStageErr_string_not_printable, /* a character in the string is not printable */    /* DONE */
     
     /* .extern errors */
     firstStageErr_extern_invalid_lbl_name,  /* the .extern parameter is not a valid name for a label */ 
