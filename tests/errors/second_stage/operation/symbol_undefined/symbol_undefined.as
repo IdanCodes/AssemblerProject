@@ -1,0 +1,3 @@
+; tried to use an undefined symbol
+arr: .data 1, 2, 3
+mov arr[1], arr2[3]

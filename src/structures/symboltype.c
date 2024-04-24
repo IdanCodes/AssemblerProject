@@ -46,8 +46,7 @@ int symbolInList(Symbol *head, char *name) {
 Symbol *allocSymbol(char *nameStart, char *nameEnd) {
     Symbol *newS;
     char temp;
-
-    /* TODO: is the name allocated twice? */
+    
     newS = (Symbol *)malloc(sizeof(Symbol));
     if (newS == NULL)
         logInsuffMemErr("allocating symbol");

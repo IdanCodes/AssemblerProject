@@ -13,8 +13,8 @@ enum secondStageErr {
     secondStageErr_entry_constant,  /* trying to define a constant as entry */  /* DONE */
     
     /* operation */
-    secondStageErr_operation_symbol_undefined,  /* undefined symbol as operand */
-    secondStageErr_operation_symbol_constant,   /* trying to use a constant as a "non-immediate" operand */
+    secondStageErr_operation_symbol_undefined,  /* undefined symbol as operand */   /* DONE */
+    secondStageErr_operation_symbol_constant,   /* trying to use a constant as a "non-immediate" operand */ /* DONE */
     secondStageErr_operation_index_oor  /* index out of range */
 };
 

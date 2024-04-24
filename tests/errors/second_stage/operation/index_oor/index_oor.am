@@ -1,0 +1,4 @@
+str: .string "abc"
+mov str[0], str[4]
+dat: .data 1, 2, 3
+mov dat[0], dat[10]

@@ -16,7 +16,7 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
     char sourceFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     char line[MAXLINE + 1];
     unsigned int sourceLine, skippedLines;
-    int instructionCounter, hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS], hasEnt, hasExt;
+    int instructionCounter, hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS], hasEnt, hasExt, i;
     FILE *sourcef, *entf, *extf;
     Symbol *tempSym;
     Operation op;
@@ -140,6 +140,20 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
                 index = byteToNumber(bytes->next->byte, NUM_ARE_BITS);  /* fetch the index from the next byte */
                 if (index < 0 || index >= tempSym->length) {
                     printSecondStageErr(secondStageErr_operation_index_oor, sourceLine, sourceFileName);
+                    /* skip to next word */
+                    bytes = bytes->next->next;
+                    instructionCounter += 2;
+                    
+                    if (operandIndex != DEST_OPERAND_INDEX) {
+                        bytes = bytes->next;
+                        instructionCounter++;
+                        
+                        if (addrsMethods[DEST_OPERAND_INDEX] == ADDR_CONSTANT_INDEX) {
+                            bytes = bytes->next;
+                            instructionCounter++;
+                        }
+                    }
+                    
                     hasErr = 1;
                     break;
                 }
