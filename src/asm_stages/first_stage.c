@@ -23,8 +23,17 @@ static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *
 static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Macro *macros, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
 
 /* DOCUMENT */
-/* fileName is the file's name without the extension */
-/* returns 1 if there was no error, 0 if there was one */
+/**
+ * Run the first stage of the assembler
+ * @param fileName The file to run the first stage on (without the .as extension)
+ * @param data A pointer to the program's data
+ * @param macros The macros list from the pre assembler
+ * @param symbols A pointer to the program's symbols list
+ * @param bytes A pointer to the assembler's byte list
+ * @param instructionCounter A pointer to the assembler's instruction counter
+ * @param dataCounter A pointer to the assembler's data counter
+ * @return 1 if there was at least one error, 0 if there were none
+ */
 int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
@@ -332,6 +341,9 @@ static char *getErrMessage(enum firstStageErr err) {
         case firstStageErr_extern_macro_name:
             return ".extern argument has the same name as a macro";
           
+        case firstStageErr_extern_expected_arg:
+            return "expected a .extern argument";
+            
             
         /* -- .entry -- */
         case firstStageErr_entry_invalid_lbl_name:
@@ -339,6 +351,9 @@ static char *getErrMessage(enum firstStageErr err) {
             
         case firstStageErr_entry_extra_chars:
             return "extra characters following .entry argument";
+
+        case firstStageErr_entry_expected_arg:
+            return "expected a .entry argument";
             
             
         /* -- operations -- */
@@ -395,6 +410,12 @@ static char *getErrMessage(enum firstStageErr err) {
     }
 }
 
+/**
+ * Register (add) a constant to the assembler's symbols list
+ * @param head A pointer to the head of the symbols list
+ * @param name The name of the new constant
+ * @param value The value of the new constant
+ */
 static void registerConstant(Symbol **head, char *name, int value) {
     Symbol *sym;
 
@@ -405,6 +426,13 @@ static void registerConstant(Symbol **head, char *name, int value) {
     addSymToList(head, sym);
 }
 
+/**
+ * Register (add) a data symbol to the assembler's symbols list
+ * @param head A pointer to the head of the symbols list
+ * @param lblSym The label symbol to register as (leave NULL if no label was defined)
+ * @param value The symbol's value (the current data counter)
+ * @param length The length of the data symbol inside the memory
+ */
 static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int length) {
     /* lblSym is not NULL here */
     lblSym->value = value;
@@ -414,6 +442,13 @@ static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int len
     addSymToList(head, lblSym);
 }
 
+/**
+ * Fetch a label given a start token
+ * @param token Where the label's definition starts
+ * @param tokEnd The last character (':') in the label's definition
+ * @param pLblSymbol A pointer to the label symbol
+ * @return A firstStageErr if there was an error (if there was no error, returns firstStageErr_no_err)
+ */
 static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **pLblSymbol) {
     int length;
     char temp;
@@ -441,6 +476,13 @@ static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **pLblSy
     return firstStageErr_no_err;
 }
 
+/**
+ * Fetch a constant from a line
+ * @param line Where the constant begins
+ * @param symbols A pointer to the assembler's symbols list
+ * @param macros The list of macros from the pre assembler
+ * @return A firstStageErr if there was an error (if there was no error, returns firstStageErr_no_err)
+ */
 static enum firstStageErr fetchConstant(char *line, Symbol **symbols, Macro *macros) {
     char *name, *token, *equalsSign, *strVal, *nameEnd;
     int numberValue;
@@ -504,7 +546,14 @@ static enum firstStageErr fetchConstant(char *line, Symbol **symbols, Macro *mac
     return firstStageErr_no_err;
 }
 
-/* token is the first number parameter */
+/**
+ * Fetch and store data args from a line
+ * @param token The first number parameter
+ * @param dataCounter A pointer to the current data counter
+ * @param symbols The assembler's symbols list
+ * @param data A pointer to the assembler's data list (memory)
+ * @return A firstStageErr if there was an error (if there was no error, returns firstStageErr_no_err) 
+ */
 static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *symbols, int **data) {
     int num;
     char *end, *next, *valEnd;
@@ -550,6 +599,16 @@ static enum firstStageErr storeDataArgs(char *token, int *dataCounter, Symbol *s
 }
 
 /* token is the .data token */
+/**
+ * Fetch data arguments from a line
+ * @param token The .data token
+ * @param dataCounter A pointer to the current data counter
+ * @param symbols The assembler's symbols list
+ * @param data A pointer to the assembler's data list (memory)
+ * @param lblSym The label symbol defined in this line (NULL if no label was defined in the line)
+ * @param macros The assembler's macros list
+ * @return A firstStageErr if there was an error (if there was no error, returns firstStageErr_no_err)
+ */
 static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym, Macro *macros) {
     enum firstStageErr err;
     int prevDC;
@@ -571,6 +630,13 @@ static enum firstStageErr fetchData(char *token, int *dataCounter, Symbol **symb
     return firstStageErr_no_err;
 }
 
+/**
+ * Fetch and store a string from a line
+ * @param quoteStart The first quote of the string
+ * @param quoteEnd The last quote of the string
+ * @param dataCounter A pointer to the current data counter
+ * @param data A pointer to the assembler's data list (memory)
+ */
 static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter, int **data) {
     int i, len, prevDC;
     
@@ -586,7 +652,16 @@ static void storeStringInData(char *quoteStart, char *quoteEnd, int *dataCounter
     (*data)[*dataCounter] = '\0';   /* terminate the string */
 }
 
-/* token is the .string token */ 
+/**
+ * Fetch a string from a line
+ * @param token The .string token
+ * @param dataCounter A pointer to the current data counter 
+ * @param symbols A pointer to the assembler's symbols list
+ * @param data A pointer to the assembler's data list (memory)
+ * @param lblSym The symbol of the label defined in this line (NULL if a label wasn't defined in the line)
+ * @param macros The assembler's macros list
+ * @return A firstStageErr if there was an error (if there was no error, returns firstStageErr_no_err)
+ */
 static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **symbols, int **data, Symbol *lblSym, Macro *macros) {
     int prevDC;
     char *quoteStart, *quoteEnd, *pc;
@@ -630,14 +705,25 @@ static enum firstStageErr fetchString(char *token, int *dataCounter, Symbol **sy
     return firstStageErr_no_err;
 }
 
+/**
+ * Fetch a .extern argument
+ * @param token The .extern token
+ * @param symbols A pointer to the assembler's symbols list
+ * @param lblSym The symbol of the label defined in this line (NULL if a label wasn't defined in the line) 
+ * @param macros The assembler's macros list
+ * @return A firstStageErr if there was an error (if there was no error, returns firstStageErr_no_err)
+ */
 static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lblSym, Macro *macros) {
-    char *tokEnd, temp;
+    char *tokEnd;
     Symbol *tempSym;
     enum firstStageErr err;
     
     err = firstStageErr_no_err;
     
     token = getNextToken(token);
+    if (*token == '\0')
+        return firstStageErr_extern_expected_arg;
+    
     if (!validSymbolName(token, tokEnd = getTokEnd(token)))
         return firstStageErr_extern_invalid_lbl_name;
 
@@ -647,29 +733,18 @@ static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lbl
     if (lblSym != NULL)
         err = firstStageErr_extern_define_label;
     
-    temp = *(tokEnd + 1);
-    *(tokEnd + 1) = '\0';
-    
-    if (isSavedKeyword(token)) {
-        *(tokEnd + 1) = temp;
+    if (isSavedKeyword(token))
         return firstStageErr_extern_saved_keyword;
-    }
     
     if (getSymbolByName(token, *symbols, &tempSym)) {
-        if ((tempSym->flags & SYMBOL_FLAG_EXTERN) == 0) {
-            *(tokEnd + 1) = temp;
+        if ((tempSym->flags & SYMBOL_FLAG_EXTERN) == 0)
             return firstStageErr_extern_label_exists;
-        }
         else
             err = firstStageErr_extern_exists;
     }
     
-    if (getMacroWithName(token, macros) != NULL) {
-        *(tokEnd + 1) = temp;
+    if (getMacroWithName(token, macros) != NULL)
         return firstStageErr_extern_macro_name;
-    }
-
-    *(tokEnd + 1) = temp;
 
     tempSym = allocSymbol(token, tokEnd + 1);
     tempSym->flags = SYMBOL_FLAG_EXTERN;
@@ -678,11 +753,20 @@ static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lbl
     return err;
 }
 
+/**
+ * Validate that a .entry line is valid (syntactically)
+ * @param token The .entry token
+ * @param lblSym The symbol of the label defined in this line (NULL if a label wasn't defined in the line)
+ * @return A firstStageErr if there was an error (if there was no error, returns firstStageErr_no_err)
+ */
 static enum firstStageErr validateEntry(char *token, Symbol *lblSym) {
     enum firstStageErr err;
     err = firstStageErr_no_err;
     
     token = getNextToken(token);
+    if (*token == '\0')
+        return firstStageErr_entry_expected_arg;
+    
     if (!validSymbolName(token, getTokEnd(token)))
         return firstStageErr_entry_invalid_lbl_name;
 
@@ -732,6 +816,17 @@ static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *
     return firstStageErr_no_err;
 }
 
+/**
+ * Fetch operands for an operation
+ * @param token The first token after the operation name
+ * @param operation The operation
+ * @param symbols The assembler's symbol list
+ * @param macros The assembler's macros list
+ * @param words The assembler's words list
+ * @param wordIndex A pointer to the current index in the words list
+ * @param operandAddrs An array to store the addressing methods of each operand
+ * @return A firstStageErr if there was an error (if there was no error, returns firstStageErr_no_err)
+ */
 static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Macro *macros, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]) {
     int operandIndex, num, numOps;
     char temp, *tokEnd, *sqrBracksOpen, *sqrBracksClose, *indexStart, *indexEnd;

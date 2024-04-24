@@ -16,7 +16,7 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
     char sourceFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     char line[MAXLINE + 1];
     unsigned int sourceLine, skippedLines;
-    int instructionCounter, hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS], hasEnt, hasExt, i;
+    int instructionCounter, hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS], hasEnt, hasExt;
     FILE *sourcef, *entf, *extf;
     Symbol *tempSym;
     Operation op;

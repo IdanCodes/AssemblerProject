@@ -50,11 +50,13 @@ enum firstStageErr {
     firstStageErr_extern_define_label,  /* a label is defined in the beginning of an extern instruction (warning) */    /* DONE */
     firstStageErr_extern_exists, /* this label was already declared as extern (warning) */  /* DONE */
     firstStageErr_extern_macro_name,    /* there's a macro with the same name as the .extern argument */    /* DONE */
+    firstStageErr_extern_expected_arg,  /* expected an argument for .extern */  /* DONE */
     
     /* .entry errors */
     firstStageErr_entry_invalid_lbl_name,   /* the .entry argument is not a valid name for a label */   /* DONE */
     firstStageErr_entry_extra_chars,    /* extra characters at the end of an entry instruction */   /* DONE */
     firstStageErr_entry_define_label,   /* a label is defined in the beginning of an entry instruction (warning) */ /* DONE */
+    firstStageErr_entry_expected_arg,   /* expected an argument for .entry */   /* DONE */
     
     /* operation errors */
     firstStageErr_operation_not_found,  /* invalid operation name */    /* DONE */
