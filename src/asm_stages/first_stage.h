@@ -57,22 +57,22 @@ enum firstStageErr {
     firstStageErr_entry_define_label,   /* a label is defined in the beginning of an entry instruction (warning) */ /* DONE */
     
     /* operation errors */
-    firstStageErr_operation_not_found,  /* invalid operator name */
-    firstStageErr_operation_expected_operand,   /* expected an operand */
-    firstStageErr_operation_invalid_immediate,  /* the immediate operand was invalid */
-    firstStageErr_operation_expected_closing_sqr_bracks,    /* expected closing square brackets */
-    firstStageErr_operation_expected_index, /* index was not found between square brackets */
-    firstStageErr_operation_invalid_index,  /* the given index (in square brackets) was invalid */
-    firstStageErr_operation_invalid_label_name, /* label name in operand has an invalid name */
-    firstStageErr_operation_invalid_addr_method,    /* invalid addressing method */
-    firstStageErr_operation_invalid_operand,    /* operand expected for operation */
-    firstStageErr_operation_expected_comma, /* expected comma to seperate operands */
-    firstStageErr_operation_immediate_oor,  /* immediate operand was out of range */
-    firstStageErr_operation_index_oor,  /* constant index was out of range */
-    firstStageErr_operation_too_many_operands, /* too many operands for an operation */
-    firstStageErr_operation_extra_chars,    /* extra characters at the end of the line */
-    firstStageErr_operation_operand_number, /* a number operand that doesn't follow # */
-    firstStageErr_operation_operand_macro   /* a macro was used as an operand */ 
+    firstStageErr_operation_not_found,  /* invalid operation name */    /* DONE */
+    firstStageErr_operation_expected_operand,   /* expected an operand */   /* DONE */
+    firstStageErr_operation_invalid_immediate,  /* the immediate operand was invalid */ /* DONE */
+    firstStageErr_operation_expected_closing_sqr_bracks,    /* expected closing square brackets */  /* DONE */
+    firstStageErr_operation_expected_index, /* index was not found between square brackets */   /* DONE */
+    firstStageErr_operation_invalid_index,  /* the given index (in square brackets) was invalid */  /* DONE */
+    firstStageErr_operation_invalid_label_name, /* label name in operand has an invalid name */ /* DONE */
+    firstStageErr_operation_invalid_addr_method,    /* invalid addressing method */ /* DONE */
+    firstStageErr_operation_invalid_operand,    /* the operand is illegal (invalid) */  /* DONE */
+    firstStageErr_operation_expected_comma, /* expected comma to seperate operands */   /* DONE */
+    firstStageErr_operation_immediate_oor,  /* immediate operand was out of range */    /* DONE */
+    firstStageErr_operation_index_oor,  /* constant index was out of range */   /* DONE */
+    firstStageErr_operation_too_many_operands, /* too many operands for an operation */ /* DONE */
+    firstStageErr_operation_extra_chars,    /* extra characters at the end of the line */   /* DONE */
+    firstStageErr_operation_operand_number, /* a number operand that doesn't follow # */    /* DONE */
+    firstStageErr_operation_operand_macro   /* a macro was used as an operand */    /* DONE */
 };
 
 int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter);

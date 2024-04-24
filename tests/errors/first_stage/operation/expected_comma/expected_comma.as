@@ -1,0 +1,4 @@
+; expected comma to seperate operands
+.data -1, 10
+mov r1, data[1]
+mov data[2] r2 

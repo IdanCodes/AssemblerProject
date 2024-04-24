@@ -349,7 +349,7 @@ static char *getErrMessage(enum firstStageErr err) {
             return "operand expected";
             
         case firstStageErr_operation_invalid_immediate:
-            return "immediate operand must be a number or constant";
+            return "immediate operand must be a number or a constant that was already defined";
             
         case firstStageErr_operation_expected_closing_sqr_bracks:
             return "expected closing square brackets";
@@ -415,24 +415,21 @@ static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int len
 }
 
 static enum firstStageErr fetchLabel(char **token, char *tokEnd, Symbol **pLblSymbol) {
-    int i;
-    char *labelName;
+    int length;
+    char temp;
     
     if (!validSymbolName(*token, tokEnd - 1))
         return firstStageErr_label_invalid_name;
-
-    /* save label name */
-    labelName = (char *)malloc(sizeof(char) * (tokEnd - (*token)));
-    if (labelName == NULL)
-        logInsuffMemErr("allocating label");
-
-    for (i = 0; i < tokEnd - (*token); i++)
-        (labelName)[i] = (*token)[i];
-    (labelName)[i] = '\0';
     
-    *pLblSymbol = allocSymbol(labelName, getTokEnd(labelName) + 1);
+    /* mark end of the label name for the allocSymbol method */
+    length = (int)(tokEnd - *token);
+    temp = (*token)[length];
+    (*token)[length] = '\0';
+    
+    *pLblSymbol = allocSymbol(*token, getTokEnd(*token) + 1);
+    (*token)[length] = temp;
 
-    if (isSavedKeyword(labelName))
+    if (isSavedKeyword(*token))
         return firstStageErr_label_saved_keyword;
 
     *token = getNextToken(*token);
@@ -493,7 +490,7 @@ static enum firstStageErr fetchConstant(char *line, Symbol **symbols, Macro *mac
         *equalsSign = '=';
         return firstStageErr_define_macro_name;
     }
-
+    
     /* make sure the numberValue is a number */
     if (!tryParseToken(strVal, &numberValue)) {
         *equalsSign = '=';
@@ -795,8 +792,15 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
                 return firstStageErr_operation_expected_closing_sqr_bracks;
             tokEnd = getStart(sqrBracksClose + 1);   /* there could be a space inside the brackets - update the token end */
             
-            if (*tokEnd != ',' && *tokEnd != '\0')
-                return firstStageErr_operation_invalid_operand;
+            if (*tokEnd != ',' && *tokEnd != '\0') {
+                /* extra characters after closing square brackets */
+                if (tokEnd == sqrBracksClose + 1)
+                    /* there was no space between the closing brackets and the characters - the operand is invalid */
+                    return firstStageErr_operation_invalid_operand;
+                else
+                    /* tokEnd > squrBracksClose + 1 -> there's a space before the extra characters */
+                    return firstStageErr_operation_expected_comma;
+            }
             
             indexStart = getStart(sqrBracksOpen + 1);   /* skip the spaces between '[' and start of operand */
             if (indexStart == sqrBracksClose)

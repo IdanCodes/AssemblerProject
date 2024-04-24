@@ -1,0 +1,4 @@
+; invalid operation name
+.extern HI
+mv r1, r2
+LABEL: jump HI

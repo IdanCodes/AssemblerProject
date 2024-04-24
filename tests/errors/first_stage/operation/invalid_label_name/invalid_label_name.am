@@ -1,0 +1,2 @@
+mystr: .string "hi"
+prn m$str[2]

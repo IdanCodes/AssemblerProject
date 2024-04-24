@@ -1,0 +1,2 @@
+dat: .data 1, 2
+lea r1, dat[2]
