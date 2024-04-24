@@ -187,7 +187,7 @@ static char *getErrMsg(enum secondStageErr err) {
     switch (err) {
         /* -- entry -- */
         case secondStageErr_entry_undefined:
-            return "undefined label";
+            return "undefined label for .entry argument";
             
         case secondStageErr_entry_constant:
             return "can't define a constant as entry";
