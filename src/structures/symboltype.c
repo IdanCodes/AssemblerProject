@@ -25,6 +25,13 @@ int validSymbolName(char *start, char *end) {
     return 1;
 }
 
+/**
+ * Get a symbol from a list of symbols by name
+ * @param name The name of the symbol to look for
+ * @param head The head of the list to search in
+ * @param pSymbol The symbol if it could be found
+ * @return Whether desired symbol could be found
+ */
 int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol) {
     while (head != NULL) {
         if (tokcmp(head->name, name) == 0) {
@@ -37,12 +44,23 @@ int getSymbolByName(char *name, Symbol *head, Symbol **pSymbol) {
     return 0;
 }
 
+/**
+ * Check if a symbol exists in a list (by name)
+ * @param head The head of the symbols list
+ * @param name The name of the symbol to look for
+ * @return Whether the symbol is in the list
+ */
 int symbolInList(Symbol *head, char *name) {
     Symbol *tempSym;
     return getSymbolByName(name, head, &tempSym);
 }
 
-/* nameEnd is the first character outside the name (name string is [name, end-1]) */
+/**
+ * Allocate a symbol
+ * @param nameStart The first character in the name of the symbol
+ * @param nameEnd 
+ * @return The first character outside the name (name string is [name, end-1])
+ */
 Symbol *allocSymbol(char *nameStart, char *nameEnd) {
     Symbol *newS;
     char temp;
@@ -62,6 +80,11 @@ Symbol *allocSymbol(char *nameStart, char *nameEnd) {
     return newS;
 }
 
+/**
+ * Add a symbol to the symbols list
+ * @param head A pointer to the beginnning of the symbols list
+ * @param symbol The symbol to add to the symbols list
+ */
 void addSymToList(Symbol **head, Symbol *symbol) {
     Symbol *temp;
 
@@ -77,6 +100,10 @@ void addSymToList(Symbol **head, Symbol *symbol) {
     temp->next = symbol;
 }
 
+/**
+ * Free a list of symbols
+ * @param head The head of the list to free
+ */
 void freeSymbolsList(Symbol *head) {
     if (head == NULL)
         return;

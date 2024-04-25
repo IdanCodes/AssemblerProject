@@ -22,10 +22,9 @@ static enum firstStageErr validateEntry(char *token, Symbol *lblSym);
 static enum firstStageErr fetchNumber(char *start, char *end, int *num, Symbol *symbols);
 static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol *symbols, Macro *macros, Byte words[NUM_MAX_EXTRA_WORDS], int *wordIndex, char operandAddrs[NUM_OPERANDS]);
 
-/* DOCUMENT */
 /**
  * Run the first stage of the assembler
- * @param fileName The file to run the first stage on (without the .as extension)
+ * @param fileName The file to run the first stage on (without the .am extension)
  * @param data A pointer to the program's data
  * @param macros The macros list from the pre assembler
  * @param symbols A pointer to the program's symbols list
@@ -833,7 +832,7 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
     
     *wordIndex = 0;
     numOps = getOperandCount(operation);
-    for (operandIndex = 0, token = getNextToken(token); *token != '\0'; operandIndex++) {
+    for (operandIndex = SOURCE_OPERAND_INDEX, token = getNextToken(token); *token != '\0'; operandIndex++) {
         if (operandIndex > numOps)
             return firstStageErr_operation_too_many_operands;
         

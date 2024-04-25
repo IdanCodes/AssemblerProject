@@ -2,6 +2,10 @@
 #include "bytelist.h"
 #include "../utils/logger.h"
 
+/**
+ * Allocate a ByteNode
+ * @return A pointer to the allocated ByteNode
+ */
 ByteNode *allocByteNode(void) {
     ByteNode *value;
 
@@ -14,6 +18,11 @@ ByteNode *allocByteNode(void) {
     return value;
 }
 
+/**
+ * Add a ByteNode to a ByteNode list
+ * @param head A pointer to the head of the ByteNode list
+ * @param node The ByteNode to add to the list
+ */
 void addByteNodeToList(ByteNode **head, ByteNode *node) {
     ByteNode *temp;
     
@@ -30,7 +39,11 @@ void addByteNodeToList(ByteNode **head, ByteNode *node) {
     temp->next = node;
 }
 
-/* allocates a ByteNode and copies the values from the give byte */
+/**
+ * Allocates a ByteNode and copies the values from a byte
+ * @param src The Byte to copy
+ * @return The ByteNode allocated
+ */
 ByteNode *copyByte(Byte src) {
     int i;
     ByteNode *result;
@@ -46,6 +59,10 @@ ByteNode *copyByte(Byte src) {
     return result;
 }
 
+/**
+ * Free a ByteNode list
+ * @param head The head of the ByteNode list
+ */
 void freeByteList(ByteNode *head) {
     if (head == NULL)
         return;

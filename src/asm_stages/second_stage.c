@@ -11,6 +11,13 @@
 static void printSecondStageErr(enum secondStageErr err, unsigned int lineNumber, char *fileName);
 static char *getErrMsg(enum secondStageErr err);
 
+/**
+ * Run the second stage of the assembler on a file
+ * @param fileName The name of the file to assemble (without the .am extension)
+ * @param symbols The assembler's symbols list
+ * @param bytes The assembler's bytes list
+ * @return Whether the assembler encountered an error
+ */
 int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
     char *token, *tokEnd, *oprndEnd, temp;
     char sourceFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
@@ -190,6 +197,12 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
     return hasErr;
 }
 
+/**
+ * Print a second stage error
+ * @param err The secondStageErr error
+ * @param lineNumber The number the error occurred on
+ * @param fileName The name of the file the error occurred on
+ */
 static void printSecondStageErr(enum secondStageErr err, unsigned int lineNumber, char *fileName) {
     char *message;
 
@@ -197,6 +210,11 @@ static void printSecondStageErr(enum secondStageErr err, unsigned int lineNumber
     logErr("file \"%s\" line %u - %s\n", fileName, lineNumber, message);
 }
 
+/**
+ * Get a second stage error string message
+ * @param err The secondStageErr to get the message of
+ * @return The string of the secondStageErr
+ */
 static char *getErrMsg(enum secondStageErr err) {
     switch (err) {
         /* -- entry -- */

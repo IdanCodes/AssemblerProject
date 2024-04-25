@@ -9,9 +9,12 @@
 static void printPreAsmErr(enum preAssembleErr err, unsigned int sourceLine, char *sourceFileName);
 static char *preAsmErrMessage(enum preAssembleErr err);
 
-/* DOCUMENT preAssemble */
-/* fileName is the name of the file without the added extension */
-/* returns 0 if there was an error (at least one), else returns 1 */
+/**
+ * Pre assemble a file
+ * @param fileName The name of the file to pre-assemble (without the file .as file extension)
+ * @param macros A pointer to the assembler's macros list
+ * @return Whether the pre-assembler encountered an error
+ */
 int preAssemble(char fileName[FILENAME_MAX], Macro **macros) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
@@ -142,6 +145,12 @@ int preAssemble(char fileName[FILENAME_MAX], Macro **macros) {
     return hasErr;
 }
 
+/**
+ * Print a pre-assembler error
+ * @param err The preAsmErr to print
+ * @param sourceLine The line in the source file the error occurred on
+ * @param sourceFileName The name of the file the error occurred on
+ */
 static void printPreAsmErr(enum preAssembleErr err, unsigned int sourceLine, char *sourceFileName) {
     logErr("%s (line %u in file '%s')\n", preAsmErrMessage(err), sourceLine, sourceFileName);
 }

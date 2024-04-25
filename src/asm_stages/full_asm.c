@@ -8,6 +8,11 @@
 #include "first_stage.h"
 #include "second_stage.h"
 
+/**
+ * Fully assemble a file
+ * @param filename The name of the file to assemble (without the .as extension)
+ * @return Whether the assemble encountered an error (at least one)
+ */
 int assembleFile(char filename[FILENAME_MAX]) {
     int *data;
     Symbol *symbols;
