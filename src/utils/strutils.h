@@ -9,11 +9,9 @@ int trim(char *str);
 char *getTokEnd(char *tok);
 char *getNextToken(char *tok);
 int tokcmp(char *str1, char *str2);
-int toklen(char *tok);
 char *getFirstOrEnd(char *str, char c);
 int tryParseToken(char *str, int *number);
 char *getEndOfOperand(char *str);
 int isInTok(char *tok, char *pc);
-int countInToken(char *token, char c);
 
 #endif /* STRUTILS */

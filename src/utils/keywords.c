@@ -2,8 +2,13 @@
 #include "operations.h"
 #include "strutils.h"
 
-/* DOCUMENT */
-/* NOTE: a register like r10 will NOT be considered a register with an invalid register "index". */
+/**
+ * Checks if a keyword is a register name
+ * NOTE: a register like r10 will NOT be considered a register with an invalid register "index"
+ * @param keyword The keyword to check
+ * @param regIndex A pointer to the register index
+ * @return Whether the keyword is a register name
+ */
 int isRegisterName(char *keyword, int *regIndex) {
     char *tmpPrefix = KEYWORD_REGISTER_PREFIX;
     
@@ -15,7 +20,12 @@ int isRegisterName(char *keyword, int *regIndex) {
             *regIndex >= REGISTER_FIRST && *regIndex < REGISTER_FIRST + REGISTER_COUNT; /* register index in range */
 }
 
-/* compares token */
+/**
+ * Checks if a keyword is a saved keyword
+ * Note: compares the first token of the given string
+ * @param keyword The keyword to check
+ * @return Whether the keyword is a saved keyword
+ */
 int isSavedKeyword(char *keyword) {
     int tempInt;
     Operation tempOp;

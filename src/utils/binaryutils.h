@@ -7,11 +7,6 @@
 #define NUM_BITS    (14)    /* number of bits in a word */
 #define NUM_BITS_BASE_4 (7) /* number of bits in a base 4 byte */
 
-#define MIN_NUMBER  (-8192) /* -(2^(NUM_BITS - 1) */
-#define MAX_NUMBER  (8191)  /* (2^(NUM_BITS - 1) - 1) */
-#define MIN_IMMEDIATE   (-2048) /* -(2^(NUM_BITS - NUM_ARE_BITS - 1) */
-#define MAX_IMMEDIATE   (2047)  /* (2^(NUM_BITS - NUM_ARE_BITS - 1) - 1 */
-
 #define NUM_ARE_BITS    (2) /* number of A,R,E bits */
 #define NUM_SOURCE_BITS (2) /* number of bits for the source addressing method */
 #define NUM_DEST_BITS   (2) /* number of bits for the destination addressing method */
@@ -44,7 +39,6 @@ int writeImmediateToByte(Byte *pbyte, int number);
 void writeRegisterToByte(Byte *pbyte, int registerNumber, int operandIndex);
 void bytesOrGate(Byte b1, Byte b2, Byte *outByte);
 void clearByte(Byte *pbyte);
-void printByteToFile(Byte byte, FILE *fp);
 void getAddrsMethods(int addrMethods[NUM_OPERANDS], Byte operationByte);
 void writeAREBits(Byte *byte, int symbolFlags);
 void shiftLeft(Byte *byte, int n);

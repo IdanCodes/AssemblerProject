@@ -1,4 +1,3 @@
-#include <math.h>
 #include "strutils.h"
 #include "charutils.h"
 
@@ -96,14 +95,10 @@ int tokcmp(char *str1, char *str2) {
             : (str1[len] == '\0' || str1[len] == ' ') ? -1 : 1;
 }
 
-int toklen(char *tok) {
-    return (int)(getTokEnd(tok) - getStart(tok)) + 1;
-}
-
 /**
  * Get the first occurrence of a character in a string, if it doesn't exist returns the end of the string
- * @param str 
- * @param c 
+ * @param str The string to search in
+ * @param c The character to look for
  * @return The first occurrence of the requested character or the address of the string's end
  */
 char *getFirstOrEnd(char *str, char c) {
@@ -112,9 +107,12 @@ char *getFirstOrEnd(char *str, char c) {
     return str;
 }
 
-/* tryParseToken: tries to parse a string's first token to double.
- * returns whether the parsing was successful. (whether the token is a valid double)
- * DOCUMENT */
+/**
+ * tries to parse a string's first token to an integer
+ * @param str The string to parse
+ * @param number A pointer to the parsed number
+ * @return Whether the parsing was successful (whether the token is a valid integer)
+ */
 int tryParseToken(char *str, int *number) {
     int sign, zeroPrefix, result;
     char *end;
@@ -179,25 +177,4 @@ char *getEndOfOperand(char *str) {
  */
 int isInTok(char *tok, char *pc) {
     return tok <= pc && getTokEnd(tok) >= pc;
-}
-
-/**
- * Check how many times a character appears in a token
- * @param token the token to search in
- * @param c the character to look for
- * @return the amount of times c appears in token 
- */
-int countInToken(char *token, char c) {
-    int cnt;
-    char *end;
-    
-    if (token == (end = getTokEnd(token)))
-        return 0;
-    
-    for (cnt = 0; token <= end; token++) {
-        if (*token == c)
-            cnt++;
-    }
-    
-    return cnt;
 }

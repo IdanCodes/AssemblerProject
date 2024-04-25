@@ -2,7 +2,6 @@
 #include "strutils.h"
 #include "keywords.h"
 
-/* DOCUMENT functions in this file */
 static Operation operations[NUM_OPERATIONS] = {
     {
         MOV_OPCODE,
@@ -117,7 +116,13 @@ static Operation operations[NUM_OPERATIONS] = {
     }
 };
 
-/* compares token (not entire string) */
+/**
+ * Get an operation by its name
+ * Note: compares token (not entire string)
+ * @param name The name of the operation to look for
+ * @param op A pointer to the operation found
+ * @return Whether there is an operation with the given name (whether the operation was found)
+ */
 int getOperationByName(char *name, Operation *op) {
     int i;
     
@@ -131,6 +136,11 @@ int getOperationByName(char *name, Operation *op) {
     return 0;
 }
 
+/**
+ * Get the amount of operands an operation has
+ * @param op The operation
+ * @return The amount of operands an operation has
+ */
 int getOperandCount(Operation op) {
     return operationHasOperand(op, SOURCE_OPERAND_INDEX) + operationHasOperand(op, DEST_OPERAND_INDEX);
 }

@@ -4,21 +4,29 @@
 #include "../structures/symboltype.h"
 #include "logger.h"
 
-int abs(int x); /* from <math.h> */
 static char getFlippedBit(char b);
 static void flipByte(Byte *pbyte);
 
+/**
+ * Check if a number is in the range of a byte
+ * @param num The number to check
+ * @return Whether the number is in range
+ */
 int inByteRange(int num) {
-    return num >= MIN_NUMBER && num <= MAX_NUMBER;
+    return (num >> NUM_BITS) == 0;
 }
 
-/* returns whether the conversion was successful
- * - assuming pbyte isn't NULL */
+/**
+ * Convert a number to a byte
+ * @param number The number to convert
+ * @param pbyte A pointer to store the conversion into
+ * @return whether the conversion to byte was successful (fails if the number is out of range for a byte or pbyte==NULL)
+ */
 int numberToByte(int number, Byte *pbyte) {
     const int firstBitValue = 1;    /* byte of LSB (least significant bit) */
     int bitValue, bitIndex, sign, temp, i;
     
-    if (!inByteRange(number))
+    if (pbyte == NULL || !inByteRange(number))
         return 0;
     
     sign = number < 0 ? -1 : 1;
@@ -54,9 +62,14 @@ int numberToByte(int number, Byte *pbyte) {
     return 1;
 }
 
-/* get a binary representation of an operation's first word
- * - assuming pbyte isn't NULL
- * - returns whether the conversion was successful */
+/**
+ * Get a binary representation of an operation's first word
+ * @param opcode The operation
+ * @param sourceAddr The source addressing method
+ * @param destAddr The destination addressing method
+ * @param pbyte A pointer to the byte to store the word into
+ * @return Whether the conversion was successful
+ */
 int getFirstWordBin(char opcode, char sourceAddr, char destAddr, Byte *pbyte) {
     int start, bitIndex;
     Byte tempByte;
@@ -68,6 +81,7 @@ int getFirstWordBin(char opcode, char sourceAddr, char destAddr, Byte *pbyte) {
     /* destination addressing */
     if (!numberToByte(destAddr, &tempByte))
         return 0;
+    
     for (start = bitIndex; (bitIndex - start) < NUM_DEST_BITS; bitIndex++)
         pbyte->bits[bitIndex] = tempByte.bits[bitIndex - start];
     
@@ -91,8 +105,16 @@ int getFirstWordBin(char opcode, char sourceAddr, char destAddr, Byte *pbyte) {
     return pbyte->hasValue = 1;
 }
 
+/**
+ * Clear a byte's bits
+ * @param pbyte A pointer to the byte to clear
+ */
 void clearByte(Byte *pbyte) {
     int i;
+    
+    /* can't clear a null pointer */
+    if (pbyte == NULL)
+        return;
     
     for (i = 0; i < NUM_BITS; i++)
         pbyte->bits[i] = 0;
@@ -100,13 +122,19 @@ void clearByte(Byte *pbyte) {
     pbyte->hasValue = 1;
 }
 
-/* returns whether the writing was successful (pretty much whether the number was in range) */
+/**
+ * Write an immediate number to a byte
+ * @param pbyte A pointer to the byte to write to
+ * @param number The number to write to the byte
+ * @return Whether the writing was successful (pretty much whether the number was in range)
+ */
 int writeImmediateToByte(Byte *pbyte, int number) {
     int i;
     int j;
     Byte tempByte;
     
-    if (number < MIN_IMMEDIATE || number > MAX_IMMEDIATE)
+    /* number << 2 is the number after adding the A,R,E bits */
+    if (!inByteRange(number << 2))
         return 0;
     
     clearByte(pbyte);
@@ -123,10 +151,19 @@ int writeImmediateToByte(Byte *pbyte, int number) {
     return 1;
 }
 
+/**
+ * Write a register operand to a byte
+ * @param pbyte A pointer to the byte to write to
+ * @param registerNumber The number of the register to write
+ * @param operandIndex The index of the operand (source, dest)
+ */
 void writeRegisterToByte(Byte *pbyte, int registerNumber, int operandIndex) {
     int i, j, startBit;
     Byte tempByte;
 
+    if (pbyte == NULL)
+        return; /* can't write to NULL */
+    
     startBit = operandIndex == SOURCE_OPERAND_INDEX ? SOURCE_REGISTER_START_BIT : DEST_REGISTER_START_BIT;
     
     /* clear prefixing bits */
@@ -145,19 +182,17 @@ void writeRegisterToByte(Byte *pbyte, int registerNumber, int operandIndex) {
     pbyte->hasValue = 1;
 }
 
+/**
+ * Logical or gate on two bytes (individual or operation on each bit)
+ * @param b1 The first byte
+ * @param b2 The second byte
+ * @param outByte The result of the logical or gate of the bytes
+ */
 void bytesOrGate(Byte b1, Byte b2, Byte *outByte) {
     int i;
     
     for (i = 0; i < NUM_BITS; i++)
         outByte->bits[i] = (char)(b1.bits[i] || b2.bits[i]);
-}
-
-void printByteToFile(Byte byte, FILE *fp) {
-    int i;
-
-    for (i = NUM_BITS - 1; i >= 0; i--)
-        fprintf(fp, "%d ", byte.bits[i]);
-    fprintf(fp, "\n");
 }
 
 /**
@@ -189,6 +224,11 @@ void shiftLeft(Byte *byte, int n) {
         byte->bits[i] = 0;
 }
 
+/**
+ * Get the addressing methods described in a first word byte
+ * @param addrMethods An array of address methods to store the address methods into
+ * @param operationByte The byte to read from
+ */
 void getAddrsMethods(int addrMethods[NUM_OPERANDS], Byte operationByte) {
     int i;
     
@@ -204,6 +244,11 @@ void getAddrsMethods(int addrMethods[NUM_OPERANDS], Byte operationByte) {
     }
 }
 
+/**
+ * Write A,R,E bits to a byte
+ * @param byte The byte to write to
+ * @param symbolFlags The symbol flags (for the A,R,E bits
+ */
 void writeAREBits(Byte *byte, int symbolFlags) {
     const char ext[NUM_ARE_BITS] = { 1, 0 };
     const char relocatable[NUM_ARE_BITS] = { 0, 1 };
@@ -236,18 +281,16 @@ int byteToNumber(Byte byte, int startIndex) {
     return result;
 }
 
-/* print a byte in base 4 to a file */
-void printBase4(FILE *fp, Byte byte/*, char base4[NUM_BITS_BASE_4 + 1]*/) {
+/**
+ * Print a byte in base 4 to a file
+ * @param fp A FILE pointer to the file to write to 
+ * @param byte The byte to write to the file
+ */
+void printBase4(FILE *fp, Byte byte) {
     int i;
     
     /* reading the byte in reverse and saving inside base4 */
     for (i = NUM_BITS_BASE_4 - 1; i >= 0; i--) {
-        /*if (byte.bits[2 * i + 1] == 0) {
-            if (byte.bits[2 * i] == 0)
-                putc(BASE_4_ZERO, fp);
-            else
-                putc(BASE_4_TWO, fp);
-        }*/
         putc(byte.bits[2 * i + 1] == 0  /* second bit */
             ? ((byte.bits[2 * i] == 0)  /* first bit */
                 /* second bit off */
@@ -260,18 +303,22 @@ void printBase4(FILE *fp, Byte byte/*, char base4[NUM_BITS_BASE_4 + 1]*/) {
             , fp);
         
     }
-    /*for (i = 0; i < NUM_BITS_BASE_4; i++)
-        base4[i] = (char)(byte.bits[NUM_BITS - 2 * i - 1] == 0
-                    ? (byte.bits[NUM_BITS - 2 * i] == 0 ? BASE_4_ZERO : BASE_4_ONE)
-                    : (byte.bits[NUM_BITS - 2 * i] == 0 ? BASE_4_TWO : BASE_4_THREE));*/
 }
 
-/* flips a bit */
+/**
+ * Flips a bit (0<->1)
+ * @param b The bit
+ * @return The flipped bit
+ */
 static char getFlippedBit(char b) {
     return b == 0 ? 1 : 0;
 }
 
 /* flips all bits in a valid byte */
+/**
+ * Flips all bits in a byte
+ * @param pbyte A pointer to the byte to flip
+ */
 static void flipByte(Byte *pbyte) {
     int bitIndex;
 
