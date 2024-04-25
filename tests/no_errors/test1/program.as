@@ -1,0 +1,4 @@
+output: .string "Hello, world!"
+prn output
+
+.entry output

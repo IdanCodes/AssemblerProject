@@ -1,0 +1,15 @@
+.entry n
+.define numPrint = 10
+loop: mov n, r1
+add r1, r1
+add zero[0], r1
+prn r1
+inc n
+mov #0, r1
+sub n, r1
+add zero[0], r1
+prn r1
+cmp n, #numPrint
+bne loop
+n: .data 1
+zero: .string "0"

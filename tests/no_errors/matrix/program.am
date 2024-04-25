@@ -1,0 +1,21 @@
+.extern width
+.extern height
+.entry matChar
+.entry newLine
+.define start = 1
+matChar: .string "0"
+spaceChar: .string " "
+newLine: .data 10, 13
+i: .data start
+j: .data start
+printRow: mov #start, i
+printChar: prn matChar[0]
+prn spaceChar[0]
+inc i[0]
+cmp i[0], width[0]
+bne printRow
+prn newLine[0]
+prn newLine[1]
+inc j[0]
+cmp j[0], height[0]
+bne printRow
