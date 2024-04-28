@@ -89,7 +89,7 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
             }
             
             tempSym->flags |= SYMBOL_FLAG_ENTRY; /* declare symbol as entry */
-            fprintf(entf, "%d %s\n", tempSym->value, token);
+            fprintf(entf, "%s\t%04d\n", token, tempSym->value);
             hasEnt = 1;
             continue;
         }
@@ -139,7 +139,7 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
             
             /* is the symbol an extern? */
             if ((tempSym->flags & SYMBOL_FLAG_EXTERN) != 0) {
-                fprintf(extf, "%d %s\n", instructionCounter, token);
+                fprintf(extf, "%s\t%04d\n", token, tempSym->value);
                 hasExt = 1;
             }
             else if (addrsMethods[operandIndex] == ADDR_CONSTANT_INDEX) {

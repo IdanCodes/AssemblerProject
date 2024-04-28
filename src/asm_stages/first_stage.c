@@ -218,6 +218,8 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
         free(labelSymbol->name);
         free(labelSymbol);
     }
+
+    fclose(sourcef);
     
     return hasErr;
 }

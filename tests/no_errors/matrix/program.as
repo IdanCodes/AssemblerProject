@@ -11,24 +11,23 @@
 ; character for each element of the matrix
 matChar: .string "0"
 spaceChar: .string " "
-; newline character - carriage return + line feed
-newLine: .data 10, 13
+; newline character - carriage return + line feed + '\0'
+newLine: .data 10, 13, 0
 
 i: .data start
 j: .data start
 
 ; printing the matrix
 printRow: mov #start, i
-printChar: prn matChar[0]
-prn spaceChar[0]
+printChar: prn matChar
+prn spaceChar
 
 inc i[0]
 cmp i[0], width[0]
 bne printRow
 
 ; i == width => print newline
-prn newLine[0]
-prn newLine[1]
+prn newLine
 
 inc j[0]
 cmp j[0], height[0]
