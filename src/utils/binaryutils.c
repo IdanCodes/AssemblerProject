@@ -13,7 +13,10 @@ static void flipByte(Byte *pbyte);
  * @return Whether the number is in range
  */
 int inByteRange(int num) {
-    return (num >> NUM_BITS) == 0;
+    const int MAX_BYTE = 1 << (NUM_BITS - 1);
+    const int MIN_BYTE = -MAX_BYTE - 1;
+    
+    return num > MIN_BYTE && num < MAX_BYTE;
 }
 
 /**

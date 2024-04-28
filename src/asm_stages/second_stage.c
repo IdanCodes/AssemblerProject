@@ -41,6 +41,9 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsi
     openFile(entFileName, "w", &entf);
     openFile(extFileName, "w", &extf);
     
+    if (bytes == NULL)
+        return 1;
+    
     sourceLine = 0;
     hasErr = 0;
     hasEnt = 0;
