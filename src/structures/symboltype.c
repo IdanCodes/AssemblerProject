@@ -72,7 +72,9 @@ Symbol *allocSymbol(char *nameStart, char *nameEnd) {
     temp = *nameEnd;
     *nameEnd = '\0';
 
-    newS->name = strdup(nameStart);
+    newS->name = malloc(strlen(nameStart));
+    strcpy(newS->name, nameStart);
+    
     if (newS->name == NULL)
         logInsuffMemErr("allocating symbol's name");
 

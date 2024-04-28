@@ -14,18 +14,26 @@
  * @return the address of the allocated macro
  */
 Macro *allocMcr(char *name) {
+    char temp, *nameEnd;
     Macro *result;
 
     result = (Macro *)malloc(sizeof(Macro));
     if (result == NULL)
         logInsuffMemErr("allocating macro");
 
-    result->name = strdup(name);
+    nameEnd = getTokEnd(name) + 1;
+    temp = *nameEnd;
+    *nameEnd = '\0';
+    
+    result->name = malloc(strlen(name));
+    strcpy(result->name, name);
+    
     if (result->name == NULL)
         logInsuffMemErr("allocating macro's name");
 
     result->next = NULL;
-
+    *nameEnd = temp;
+    
     return result;
 }
 

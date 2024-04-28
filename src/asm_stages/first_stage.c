@@ -7,7 +7,7 @@
 #include "../utils/logger.h"
 #include "../utils/keywords.h"
 
-static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName);
+static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName, unsigned int **lineErrs, unsigned int *numErrs);
 static char *getErrMessage(enum firstStageErr err);
 static void registerConstant(Symbol **head, char *name, int value);
 static void registerDataSymbol(Symbol **head, Symbol *lblSym, int value, int length);
@@ -31,9 +31,11 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
  * @param bytes A pointer to the assembler's byte list
  * @param instructionCounter A pointer to the assembler's instruction counter
  * @param dataCounter A pointer to the assembler's data counter
+ * @param lineErrs A pointer to the lines where there were errors
+ * @param numErrs A pointer to the amount of errors in the first stage
  * @return 1 if there was at least one error, 0 if there were none
  */
-int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter) {
+int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter, unsigned int **lineErrs, unsigned *numErrs) {
     /* -- declarations -- */
     unsigned int sourceLine, skippedLines;
     char sourceFileName[FILENAME_MAX], *token, *tokEnd, operandAddrs[NUM_OPERANDS];
@@ -56,6 +58,8 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
     if (*data == NULL)
         logInsuffMemErr("allocating data for first stage");
     
+    *numErrs = 0;
+    *lineErrs = (unsigned int *)malloc(sizeof(unsigned int) * *numErrs);
     *instructionCounter = 0;
     *dataCounter = 0;
     sourceLine = 0;
@@ -81,7 +85,7 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
         if (*(tokEnd = getTokEnd(token)) == LABEL_END_CHAR) 
         {
             if ((err = fetchLabel(&token, tokEnd, &labelSymbol)) != firstStageErr_no_err) {
-                printFirstStageError(err, sourceLine, sourceFileName);
+                printFirstStageError(err, sourceLine, sourceFileName, lineErrs, numErrs);
                 hasErr = 1;
                 continue;
             }
@@ -90,11 +94,11 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
         /* constant declaration? */
         if (tokcmp(token, KEYWORD_CONST_DEC) == 0) {
             if (labelSymbol != NULL) {
-                printFirstStageError(firstStageErr_label_const_definition, sourceLine, sourceFileName);
+                printFirstStageError(firstStageErr_label_const_definition, sourceLine, sourceFileName, lineErrs, numErrs);
                 hasErr = 1;
             }
             else if ((err = fetchConstant(line, symbols, macros)) != firstStageErr_no_err) {
-                printFirstStageError(err, sourceLine, sourceFileName);
+                printFirstStageError(err, sourceLine, sourceFileName, lineErrs, numErrs);
                 hasErr = 1;
             }
             continue;
@@ -104,7 +108,7 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
         /* .data */
         if (tokcmp(token, KEYWORD_DATA_DEC) == 0) {
             if ((err = fetchData(token, dataCounter, symbols, data, labelSymbol, macros)) != firstStageErr_no_err) {
-                printFirstStageError(err, sourceLine, sourceFileName);
+                printFirstStageError(err, sourceLine, sourceFileName, lineErrs, numErrs);
                 hasErr = 1;
             }
             continue;
@@ -113,7 +117,7 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
         /* .string */
         if (tokcmp(token, KEYWORD_STRING_DEC) == 0) {
             if ((err = fetchString(token, dataCounter, symbols, data, labelSymbol, macros)) != firstStageErr_no_err) {
-                printFirstStageError(err, sourceLine, sourceFileName);
+                printFirstStageError(err, sourceLine, sourceFileName, lineErrs, numErrs);
                 hasErr = 1;
             }
             continue;
@@ -127,7 +131,7 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
                 else if (err == firstStageErr_extern_define_label)
                     logWarn("ignoring label defined in .extern instruction (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
                 else {
-                    printFirstStageError(err, sourceLine, sourceFileName);
+                    printFirstStageError(err, sourceLine, sourceFileName, lineErrs, numErrs);
                     hasErr = 1;
                 }
             }
@@ -140,7 +144,7 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
                 if (err == firstStageErr_entry_define_label)
                     logWarn("ignoring label defined in .entry instruction (in file \"%s\", line %u)\n", sourceFileName, sourceLine);
                 else {
-                    printFirstStageError(err, sourceLine, sourceFileName);
+                    printFirstStageError(err, sourceLine, sourceFileName, lineErrs, numErrs);
                     hasErr = 1;
                 }
             }
@@ -149,7 +153,7 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
         
         /* is this an invalid operation? */
         if (!getOperationByName(token, &operation)) {
-            printFirstStageError(firstStageErr_operation_not_found, sourceLine, sourceFileName);
+            printFirstStageError(firstStageErr_operation_not_found, sourceLine, sourceFileName, lineErrs, numErrs);
             hasErr = 1;
             continue;
         }
@@ -157,13 +161,13 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
         /* add the symbol to the symbols list */
         if (labelSymbol != NULL) {
             if (symbolInList(*symbols, labelSymbol->name)) {
-                printFirstStageError(firstStageErr_label_name_taken, sourceLine, sourceFileName);
+                printFirstStageError(firstStageErr_label_name_taken, sourceLine, sourceFileName, lineErrs, numErrs);
                 hasErr = 1;
                 continue;
             }
             
             if (getMacroWithName(labelSymbol->name, macros) != NULL) {
-                printFirstStageError(firstStageErr_label_macro_name, sourceLine, sourceFileName);
+                printFirstStageError(firstStageErr_label_macro_name, sourceLine, sourceFileName, lineErrs, numErrs);
                 hasErr = 1;
                 continue;
             }
@@ -176,7 +180,7 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
         /* fetch operands */
         numWords = 0;
         if ((err = fetchOperands(token, operation, *symbols, macros, words, &numWords, operandAddrs)) != firstStageErr_no_err) {
-            printFirstStageError(err, sourceLine, sourceFileName);
+            printFirstStageError(err, sourceLine, sourceFileName, lineErrs, numErrs);
             hasErr = 1;
             
             continue;
@@ -229,8 +233,10 @@ int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **sym
  * @param err The error to print
  * @param sourceLine The line the error occured on in the file
  * @param fileName The name of the file the error occured on
+ * @param lineErrs A pointer to the line errors of the first stage
+ * @param numErrs A pointer to the number of errors in the first stage
  */
-static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName) {
+static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine, char *fileName, unsigned int **lineErrs, unsigned int *numErrs) {
     char *message;
     
     if (err == firstStageErr_no_err)
@@ -238,6 +244,11 @@ static void printFirstStageError(enum firstStageErr err, unsigned int sourceLine
     
     message = getErrMessage(err);
     logErr("file \"%s\" line %u - %s\n", fileName, sourceLine, message);
+    
+    /* add to line erros */
+    *lineErrs = (unsigned int *)realloc(*lineErrs, sizeof(unsigned int) * *numErrs);
+    (*lineErrs)[*numErrs] = sourceLine;
+    (*numErrs)++;
 }
 
 /**

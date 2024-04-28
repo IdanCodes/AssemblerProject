@@ -18,6 +18,6 @@ enum secondStageErr {
     secondStageErr_operation_index_oor  /* index out of range */
 };
 
-int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes);
+int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsigned int *lineErrs, unsigned int numErrs);
 
 #endif /* SECOND_STAGE */

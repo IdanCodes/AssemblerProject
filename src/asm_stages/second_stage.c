@@ -10,15 +10,18 @@
 
 static void printSecondStageErr(enum secondStageErr err, unsigned int lineNumber, char *fileName);
 static char *getErrMsg(enum secondStageErr err);
+static int isErrLine(unsigned int sourceLine, unsigned int *lineErrs, unsigned int numErrs);
 
 /**
  * Run the second stage of the assembler on a file
  * @param fileName The name of the file to assemble (without the .am extension)
  * @param symbols The assembler's symbols list
  * @param bytes The assembler's bytes list
+ * @param lineErrs The first stage's errors
+ * @param numErrs The amount of errors in the first stage
  * @return Whether the assembler encountered an error
  */
-int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
+int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsigned int *lineErrs, unsigned int numErrs) {
     char *token, *tokEnd, *oprndEnd, temp;
     char sourceFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     char line[MAXLINE + 1];
@@ -98,6 +101,22 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes) {
             continue;   /* an error was already printed in the first stage */
 
         getAddrsMethods(addrsMethods, bytes->byte);
+        
+        if (isErrLine(sourceLine, lineErrs, numErrs)) {
+            /* increment instruction counter to the next line*/
+            for (operandIndex = 0; operandIndex < NUM_OPERANDS; operandIndex++) {
+                if (!operationHasOperand(op, operandIndex))
+                    continue;
+
+                instructionCounter++;
+                bytes = bytes->next;
+                if (addrsMethods[operandIndex] == ADDR_CONSTANT_INDEX) {
+                    instructionCounter++;
+                    bytes = bytes->next;
+                }
+            }
+            continue;
+        }
         
         instructionCounter++;
         bytes = bytes->next;
@@ -241,4 +260,17 @@ static char *getErrMsg(enum secondStageErr err) {
         default:
             return "UNDEFINED ERROR";
     }
+}
+
+int isErrLine(unsigned int sourceLine, unsigned int *lineErrs, unsigned int numErrs) {
+    int i;
+    
+    for (i = 0; i < numErrs; i++) {
+        if (lineErrs[i] > sourceLine)
+            break;  /* the lineErrs array is sorted */
+        if (lineErrs[i] == sourceLine)
+            return 1;
+    }
+    
+    return 0;
 }

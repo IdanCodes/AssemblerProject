@@ -77,6 +77,6 @@ enum firstStageErr {
     firstStageErr_operation_operand_macro   /* a macro was used as an operand */    /* DONE */
 };
 
-int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter);
+int assemblerFirstStage(char fileName[], int **data, Macro *macros, Symbol **symbols, ByteNode **bytes, int *instructionCounter, int *dataCounter, unsigned int **lineErrs, unsigned int *numErrs);
 
 #endif /* FIRST_STAGE */

@@ -15,6 +15,7 @@
  */
 int assembleFile(char filename[FILENAME_MAX]) {
     int *data;
+    unsigned int *lineErrs, numErrs;
     Symbol *symbols;
     ByteNode *bytes;
     Macro *macros = NULL;   /* so the macros won't start off as garbage */
@@ -40,10 +41,10 @@ int assembleFile(char filename[FILENAME_MAX]) {
         goto end;
     }
 
-    hasErr = assemblerFirstStage(filename, &data, macros, &symbols, &bytes, &instructionCounter, &dataCounter);
+    hasErr = assemblerFirstStage(filename, &data, macros, &symbols, &bytes, &instructionCounter, &dataCounter, &lineErrs, &numErrs);
     freeMcrList(macros);
     
-    hasErr = hasErr || (assemblerSecondStage(filename, symbols, bytes));
+    hasErr = assemblerSecondStage(filename, symbols, bytes, lineErrs, numErrs) || hasErr;
 
     /* check memory length (if there's not already an error) */
     if (!hasErr && (INSTRUCTION_COUNTER_OFFSET + instructionCounter + dataCounter) >= NUM_MEM_CELLS) {
@@ -76,6 +77,7 @@ int assembleFile(char filename[FILENAME_MAX]) {
 
     /* free allocated data */
     free(data);
+    free(lineErrs);
     freeSymbolsList(symbols);
     freeByteList(bytes);
     
