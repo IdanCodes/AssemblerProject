@@ -25,7 +25,7 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsi
     char *token, *tokEnd, *oprndEnd, temp;
     char sourceFileName[FILENAME_MAX], entFileName[FILENAME_MAX], extFileName[FILENAME_MAX];
     char line[MAXLINE + 1];
-    unsigned int sourceLine, skippedLines;
+    unsigned int instructionCounter, sourceLine, skippedLines;
     int hasErr, operandIndex, index, addrsMethods[NUM_OPERANDS], hasEnt, hasExt;
     FILE *sourcef, *entf, *extf;
     Symbol *tempSym;
@@ -45,6 +45,7 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsi
         return 1;
     
     sourceLine = 0;
+    instructionCounter = INSTRUCTION_COUNTER_OFFSET;
     hasErr = 0;
     hasEnt = 0;
     hasExt = 0;
@@ -109,14 +110,18 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsi
             for (operandIndex = 0; operandIndex < NUM_OPERANDS; operandIndex++) {
                 if (!operationHasOperand(op, operandIndex))
                     continue;
-                
+
+                instructionCounter++;
                 bytes = bytes->next;
-                if (addrsMethods[operandIndex] == ADDR_CONSTANT_INDEX)
+                if (addrsMethods[operandIndex] == ADDR_CONSTANT_INDEX) {
+                    instructionCounter++;
                     bytes = bytes->next;
+                }
             }
             continue;
         }
         
+        instructionCounter++;
         bytes = bytes->next;
         token = getNextToken(token);    /* go to first operand */
         for (operandIndex = 0; operandIndex < NUM_OPERANDS; operandIndex++) {
@@ -156,7 +161,7 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsi
             
             /* is the symbol an extern? */
             if ((tempSym->flags & SYMBOL_FLAG_EXTERN) != 0) {
-                fprintf(extf, "%s\t%04d\n", token, tempSym->value);
+                fprintf(extf, "%s\t%04d\n", token, instructionCounter);
                 hasExt = 1;
             }
             else if (addrsMethods[operandIndex] == ADDR_CONSTANT_INDEX) {
@@ -165,13 +170,17 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsi
                 if (index < 0 || index >= tempSym->length) {
                     printSecondStageErr(secondStageErr_operation_index_oor, sourceLine, sourceFileName);
                     /* skip to next word */
+                    instructionCounter++;
                     bytes = bytes->next->next;
                     
                     if (operandIndex != DEST_OPERAND_INDEX) {
+                        instructionCounter++;
                         bytes = bytes->next;
                         
-                        if (addrsMethods[DEST_OPERAND_INDEX] == ADDR_CONSTANT_INDEX)
+                        if (addrsMethods[DEST_OPERAND_INDEX] == ADDR_CONSTANT_INDEX) {
+                            instructionCounter++;
                             bytes = bytes->next;
+                        }
                     }
                     
                     hasErr = 1;
@@ -182,11 +191,15 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsi
             nextOperand:
             /* check if both are not registers */
             if (operandIndex == SOURCE_OPERAND_INDEX || addrsMethods[SOURCE_OPERAND_INDEX] != ADDR_REGISTER || addrsMethods[DEST_OPERAND_INDEX] != ADDR_REGISTER) {
+                instructionCounter++;
                 bytes = bytes->next;
             }
             
-            if (addrsMethods[operandIndex] == ADDR_CONSTANT_INDEX)
-                bytes = bytes->next;    /* skip index byte */
+            if (addrsMethods[operandIndex] == ADDR_CONSTANT_INDEX) {
+                /* skip index byte */
+                instructionCounter++;
+                bytes = bytes->next;
+            }
             
             *oprndEnd = temp;
             token = getStart(tokEnd + 1);
