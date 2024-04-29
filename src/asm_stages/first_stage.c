@@ -846,11 +846,13 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
     
     *wordIndex = 0;
     numOps = getOperandCount(operation);
+    /* clear the operands' bits */
+    operandAddrs[DEST_OPERAND_INDEX] = operandAddrs[SOURCE_OPERAND_INDEX] = 0;
+    
     for (operandIndex = SOURCE_OPERAND_INDEX, token = getNextToken(token); *token != '\0'; operandIndex++) {
         if (operandIndex > numOps)
             return firstStageErr_operation_too_many_operands;
         
-        operandAddrs[operandIndex] = 0;
         if (!operationHasOperand(operation, operandIndex))
             continue;   /* the operation doesn't accept this operand */
 
@@ -980,10 +982,6 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
         else
             token = tokEnd;
     }
-
-    /* clear the operands' bits */
-    if (numOps == 0)
-        operandAddrs[DEST_OPERAND_INDEX] = operandAddrs[SOURCE_OPERAND_INDEX] = 0;
     
     /* check for extra text following the operands */
     if (operandIndex < numOps)

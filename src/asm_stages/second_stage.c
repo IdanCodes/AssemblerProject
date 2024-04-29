@@ -107,6 +107,13 @@ int assemblerSecondStage(char fileName[], Symbol *symbols, ByteNode *bytes, unsi
         
         if (isErrLine(sourceLine, lineErrs, numErrs)) {
             /* increment instruction counter to the next line*/
+            if (addrsMethods[SOURCE_OPERAND_INDEX] == ADDR_REGISTER
+            && addrsMethods[DEST_OPERAND_INDEX] == ADDR_REGISTER) {
+                instructionCounter++;
+                bytes = bytes->next;
+                continue;
+            }
+            
             for (operandIndex = 0; operandIndex < NUM_OPERANDS; operandIndex++) {
                 if (!operationHasOperand(op, operandIndex))
                     continue;
