@@ -760,6 +760,7 @@ static enum firstStageErr fetchExtern(char *token, Symbol **symbols, Symbol *lbl
 
     tempSym = allocSymbol(token, tokEnd + 1);
     tempSym->flags = SYMBOL_FLAG_EXTERN;
+    tempSym->value = 0;
 
     addSymToList(symbols, tempSym);
     return err;
