@@ -981,6 +981,10 @@ static enum firstStageErr fetchOperands(char *token, Operation operation, Symbol
             token = tokEnd;
     }
 
+    /* clear the operands' bits */
+    if (numOps == 0)
+        operandAddrs[DEST_OPERAND_INDEX] = operandAddrs[SOURCE_OPERAND_INDEX] = 0;
+    
     /* check for extra text following the operands */
     if (operandIndex < numOps)
         return firstStageErr_operation_expected_operand;

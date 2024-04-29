@@ -6,7 +6,7 @@
 #define PRE_ASSEMBLED_FILE_EXTENSION    "am"
 #define ENTRIES_FILE_EXTENSION          "ent"
 #define EXTERNALS_FILE_EXTENSION        "ext"
-#define OBJECT_FILE_EXTENSION           "obj"
+#define OBJECT_FILE_EXTENSION           "ob"
 
 void openFile(char fileName[], char mode[], FILE **pfile);
 int tryOpenFile(char fileName[], char mode[], FILE **pfile);
